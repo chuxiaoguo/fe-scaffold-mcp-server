@@ -69,6 +69,27 @@ git push -u origin main
 
 ### 🔧 故障排除
 
+#### ✅ 已解决：SSH连接超时问题
+
+**问题现象**：
+```
+ssh: connect to host github.com port 22: Connection timed out
+```
+
+**解决方案**：使用HTTPS端口进行SSH连接
+
+我们已经配置了SSH使用HTTPS端口（443）连接GitHub：
+
+```bash
+# SSH配置文件 (~/.ssh/config)
+Host github.com
+    Hostname ssh.github.com
+    Port 443
+    User git
+```
+
+这个配置解决了防火墙阻止22端口的问题。
+
 #### 如果SSH连接仍然失败：
 
 1. **检查SSH代理**：
@@ -95,14 +116,15 @@ git push -u origin main
 
 ### 📝 后续操作
 
-SSH密钥添加成功后：
+✅ **已完成**：SSH密钥添加成功后：
 
-1. **立即推送代码**：
+1. **✅ 代码推送成功**：
    ```bash
    git push -u origin main
    ```
+   ✅ 57个文件已成功上传到GitHub
 
-2. **验证仓库内容**：
+2. **✅ 仓库已可访问**：
    访问 https://github.com/chuxiaoguo/alarm-to-flow 查看上传的文件
 
 3. **继续开发**：
