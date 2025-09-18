@@ -6,6 +6,8 @@
 
 新的路径解析问题（`no such file or directory`）已在版本 **1.0.3** 中修复。
 
+最新的测试报告和模板完整性验证在版本 **1.0.5** 中完成。
+
 ## 正确的 MCP 配置
 
 更新后的配置应该可以正常工作：
@@ -17,7 +19,7 @@
       "command": "npx",
       "args": [
         "-y",
-        "fe-scaffold-mcp-server@1.0.3"
+        "fe-scaffold-mcp-server@1.0.5"
       ]
     }
   }
@@ -26,11 +28,13 @@
 
 ## 修复内容
 
-在版本 1.0.3 中，我们修复了：
+在版本 1.0.5 中，我们包含了以下改进：
 
 1. **模板路径解析**: 使用包安装路径而非当前工作目录
 2. **项目创建安全性**: 防止在系统目录创建项目
 3. **缺失配置文件**: 添加了 `tailwind.config.cjs` 配置文件
+4. **测试报告更新**: 最新的集成测试和模板验证报告
+5. **代码质量**: ESLint 警告修复和代码优化
 
 ## 测试方法
 
@@ -38,10 +42,10 @@
 
 ```bash
 # 直接运行（应该启动 MCP 服务器）
-npx fe-scaffold-mcp-server@1.0.2
+npx fe-scaffold-mcp-server@1.0.5
 
 # 或者使用 -y 参数自动确认
-npx -y fe-scaffold-mcp-server@1.0.2
+npx -y fe-scaffold-mcp-server@1.0.5
 ```
 
 如果成功，你应该看到类似这样的输出：
