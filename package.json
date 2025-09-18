@@ -3,7 +3,16 @@
   "version": "1.0.1",
   "description": "Frontend Scaffold MCP Server - A Model Context Protocol server for generating frontend project scaffolds",
   "main": "dist/index.js",
+  "bin": {
+    "fe-scaffold-mcp-server": "dist/index.js"
+  },
   "type": "module",
+  "files": [
+    "dist/**/*",
+    "templates/**/*",
+    "README.md",
+    "EXAMPLES.md"
+  ],
   "scripts": {
     "build": "rm -rf dist/* && tsc",
     "dev": "tsc --watch",
