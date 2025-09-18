@@ -1,0 +1,38 @@
+{
+  "vite": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "analyze": "vite build --mode analyze"
+  },
+  "webpack": {
+    "dev": "webpack serve --mode development",
+    "build": "webpack --mode production",
+    "analyze": "webpack-bundle-analyzer dist/stats.json"
+  },
+  "typescript": {
+    "type-check": "vue-tsc --noEmit"
+  },
+  "testing": {
+    "vitest": {
+      "test": "vitest",
+      "test:ui": "vitest --ui"
+    },
+    "jest": {
+      "test": "jest",
+      "test:watch": "jest --watch"
+    }
+  },
+  "qualityTools": {
+    "eslint": {
+      "lint": "eslint . --ext .ts,.tsx,.js,.jsx,.vue",
+      "lint:fix": "eslint . --ext .ts,.tsx,.js,.jsx,.vue --fix"
+    },
+    "prettier": {
+      "format": "prettier --write ."
+    },
+    "lsLint": {
+      "lint:ls": "ls-lint"
+    }
+  }
+}
