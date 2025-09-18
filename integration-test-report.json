@@ -1,0 +1,81 @@
+{
+  "timestamp": "2025-09-18T12:07:45.283Z",
+  "scaffold": {
+    "total": 3,
+    "passed": 3,
+    "results": [
+      {
+        "testCase": "vue3-typescript-vite",
+        "success": true,
+        "projectPath": "/Users/zcg/Desktop/open-source/mcp-server/fe-scaffold-mcp-server/test-output/test-vue3-app",
+        "config": {
+          "projectName": "test-vue3-app",
+          "framework": "vue3",
+          "language": "typescript",
+          "buildTool": "vite",
+          "styleFramework": "tailwind",
+          "features": [
+            "eslint",
+            "prettier",
+            "testing",
+            "mock"
+          ]
+        }
+      },
+      {
+        "testCase": "react-typescript-vite",
+        "success": true,
+        "projectPath": "/Users/zcg/Desktop/open-source/mcp-server/fe-scaffold-mcp-server/test-output/test-react-app",
+        "config": {
+          "projectName": "test-react-app",
+          "framework": "react",
+          "language": "typescript",
+          "buildTool": "vite",
+          "styleFramework": "tailwind",
+          "features": [
+            "eslint",
+            "prettier",
+            "testing",
+            "mock"
+          ]
+        }
+      },
+      {
+        "testCase": "vue2-javascript-webpack",
+        "success": true,
+        "projectPath": "/Users/zcg/Desktop/open-source/mcp-server/fe-scaffold-mcp-server/test-output/test-vue2-app",
+        "config": {
+          "projectName": "test-vue2-app",
+          "framework": "vue2",
+          "language": "javascript",
+          "buildTool": "webpack",
+          "styleFramework": "sass",
+          "features": [
+            "eslint",
+            "prettier",
+            "testing"
+          ]
+        }
+      }
+    ]
+  },
+  "validation": {
+    "total": 3,
+    "passed": 3,
+    "results": [
+      {
+        "project": "test-vue3-app",
+        "success": true
+      },
+      {
+        "project": "test-react-app",
+        "success": true
+      },
+      {
+        "project": "test-vue2-app",
+        "success": true
+      }
+    ]
+  },
+  "overallSuccess": true
+}

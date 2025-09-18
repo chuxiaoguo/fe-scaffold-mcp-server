@@ -1,0 +1,62 @@
+{
+  "timestamp": "2025-09-18T12:08:19.244Z",
+  "summary": {
+    "total": 3,
+    "passed": 3,
+    "failed": 0,
+    "successRate": 100
+  },
+  "results": [
+    {
+      "template": "vue3-vite",
+      "framework": "vue3",
+      "buildTool": "vite",
+      "language": "typescript",
+      "success": true,
+      "error": null,
+      "steps": {
+        "generate": true,
+        "structure": true,
+        "packageJson": true,
+        "install": true,
+        "lint": true,
+        "test": true,
+        "build": true
+      }
+    },
+    {
+      "template": "vue2-webpack",
+      "framework": "vue2",
+      "buildTool": "webpack",
+      "language": "javascript",
+      "success": true,
+      "error": null,
+      "steps": {
+        "generate": true,
+        "structure": true,
+        "packageJson": true,
+        "install": true,
+        "lint": true,
+        "test": true,
+        "build": true
+      }
+    },
+    {
+      "template": "react-vite",
+      "framework": "react",
+      "buildTool": "vite",
+      "language": "typescript",
+      "success": true,
+      "error": null,
+      "steps": {
+        "generate": true,
+        "structure": true,
+        "packageJson": true,
+        "install": true,
+        "lint": true,
+        "test": true,
+        "build": true
+      }
+    }
+  ]
+}
