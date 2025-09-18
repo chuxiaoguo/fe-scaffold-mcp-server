@@ -14,16 +14,16 @@ export class TemplateCopier {
     // 在开发环境中，从src/generators指向templates
     // 在npm包中，从dist/generators指向templates
     const currentDir = __dirname;
-    
+
     // 检查是否在dist目录中（npm包环境）
-    if (currentDir.includes('/dist/')) {
+    if (currentDir.includes("/dist/")) {
       // 在npm包中，从dist/generators回到包根目录下的templates
       // dist/generators -> fe-scaffold-mcp-server/templates
-      return resolve(currentDir, '../../templates');
+      return resolve(currentDir, "../../templates");
     } else {
       // 在开发环境中，从src/generators回到项目根目录下的templates
-      // src/generators -> fe-scaffold-mcp-server/templates  
-      return resolve(currentDir, '../../templates');
+      // src/generators -> fe-scaffold-mcp-server/templates
+      return resolve(currentDir, "../../templates");
     }
   }
 
@@ -47,12 +47,12 @@ export class TemplateCopier {
 
     try {
       // 添加调试信息
-      console.debug('Template resolution debug:');
-      console.debug('  __dirname:', __dirname);
-      console.debug('  templateBasePath:', templateBasePath);
-      console.debug('  templateName:', templateName);
-      console.debug('  templatePath:', templatePath);
-      
+      console.debug("Template resolution debug:");
+      console.debug("  __dirname:", __dirname);
+      console.debug("  templateBasePath:", templateBasePath);
+      console.debug("  templateName:", templateName);
+      console.debug("  templatePath:", templatePath);
+
       // 检查模板是否存在
       await fs.access(templatePath);
 
@@ -62,12 +62,14 @@ export class TemplateCopier {
       return result;
     } catch (error) {
       // 添加更详细的错误信息
-      const errorMsg = `模板不存在: ${error instanceof Error ? error.message : String(error)}
+      const errorMsg = `模板不存在: ${
+        error instanceof Error ? error.message : String(error)
+      }
 调试信息:
   模板基础路径: ${templateBasePath}
   模板名称: ${templateName}
   完整模板路径: ${templatePath}`;
-      
+
       result.failed.push({
         file: templatePath,
         error: errorMsg,
