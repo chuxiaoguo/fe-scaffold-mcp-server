@@ -1,14 +1,18 @@
 import { promises as fs } from "fs";
 import { join, dirname, resolve } from "path";
+import { fileURLToPath } from "url";
 import { ScaffoldOptions } from "../types.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 /**
  * 模板复制器 - 负责复制基础模板文件
  */
 export class TemplateCopier {
   private static readonly TEMPLATE_BASE_PATH = resolve(
-    process.cwd(),
-    "templates"
+    __dirname,
+    "../../templates"
   );
 
   /**

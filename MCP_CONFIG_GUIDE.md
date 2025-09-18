@@ -1,0 +1,86 @@
+# MCP 配置测试指南
+
+## 问题解决
+
+你遇到的错误 `could not determine executable to run` 已经在版本 **1.0.2** 中修复。
+
+## 正确的 MCP 配置
+
+更新后的配置应该可以正常工作：
+
+```json
+{
+  "mcpServers": {
+    "fe-scaffold": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "fe-scaffold-mcp-server@1.0.2"
+      ]
+    }
+  }
+}
+```
+
+## 修复内容
+
+在版本 1.0.2 中，我们添加了：
+
+1. **bin 字段**: 在 package.json 中指定可执行文件入口点
+2. **files 字段**: 确保发布时包含所有必要文件
+3. **可执行权限**: 确保 dist/index.js 具有执行权限
+
+## 测试方法
+
+你可以通过以下命令测试包是否正常工作：
+
+```bash
+# 直接运行（应该启动 MCP 服务器）
+npx fe-scaffold-mcp-server@1.0.2
+
+# 或者使用 -y 参数自动确认
+npx -y fe-scaffold-mcp-server@1.0.2
+```
+
+如果成功，你应该看到类似这样的输出：
+```
+前端脚手架MCP服务器已启动
+支持的工具: create-scaffold, list-templates, validate-stack, preview-config
+```
+
+## 可用的 MCP 工具
+
+一旦配置成功，你可以使用以下工具：
+
+1. **create-scaffold**: 创建前端项目脚手架
+2. **list-templates**: 列出支持的技术栈模板
+3. **validate-stack**: 验证技术栈组合兼容性
+4. **preview-config**: 预览项目配置文件
+
+## 支持的技术栈
+
+- **框架**: Vue3, Vue2, React
+- **语言**: TypeScript, JavaScript  
+- **构建工具**: Vite, Webpack
+- **样式**: Tailwind CSS, Sass, Less
+- **UI库**: Element Plus, Element UI, Ant Design
+- **测试**: Vitest, Jest
+- **Mock**: MSW, vite-plugin-mock
+
+## 故障排除
+
+如果仍然遇到问题：
+
+1. 清除 npx 缓存：`npx clear-npx-cache`
+2. 使用最新版本：`npx -y fe-scaffold-mcp-server@latest`
+3. 检查 Node.js 版本：需要 >= 18.0.0
+
+## 示例使用
+
+配置成功后，你可以在支持 MCP 的客户端中使用：
+
+```
+请帮我创建一个 Vue3 + TypeScript + Vite + Tailwind CSS 的项目
+```
+
+这将自动调用 create-scaffold 工具生成完整的项目结构。
