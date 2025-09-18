@@ -17,10 +17,12 @@ export class TemplateCopier {
     
     // 检查是否在dist目录中（npm包环境）
     if (currentDir.includes('/dist/')) {
-      // 在npm包中，从dist/generators回到包根目录
-      return resolve(currentDir, '../../../templates');
+      // 在npm包中，从dist/generators回到包根目录下的templates
+      // dist/generators -> fe-scaffold-mcp-server/templates
+      return resolve(currentDir, '../../templates');
     } else {
-      // 在开发环境中，从src/generators回到项目根目录
+      // 在开发环境中，从src/generators回到项目根目录下的templates
+      // src/generators -> fe-scaffold-mcp-server/templates  
       return resolve(currentDir, '../../templates');
     }
   }
