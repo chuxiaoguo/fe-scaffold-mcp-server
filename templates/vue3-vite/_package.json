@@ -20,7 +20,8 @@
   },
   "dependencies": {
     "vue": "^3.4.0",
-    "{{UI_LIBRARY_DEPS}}": "{{UI_LIBRARY_VERSION}}"
+    "element-plus": "^2.6.0",
+    "@element-plus/icons-vue": "^2.3.1"
   },
   "devDependencies": {
     "@commitlint/cli": "^19.0.0",
@@ -59,7 +60,8 @@
     "vue3",
     "vite",
     "typescript",
-    "{{STYLE_FRAMEWORK}}"
+    "tailwind",
+    "element-plus"
   ],
   "author": "fe-scaffold-mcp-server",
   "license": "MIT"

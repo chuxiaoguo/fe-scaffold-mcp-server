@@ -103,14 +103,6 @@ export async function handleCreateScaffold(
     // 确定项目路径和项目名称
     const { projectPath, projectName } = resolveProjectPathAndName(params, fixedOptions);
 
-    // 确保项目路径不是根目录或系统目录
-    if (
-      projectPath === "/" ||
-      projectPath.startsWith("/usr") ||
-      projectPath.startsWith("/System")
-    ) {
-      throw new Error(`不能在系统目录创建项目: ${projectPath}`);
-    }
     const result = await ProjectGenerator.generateProject(
       fixedOptions,
       projectName,

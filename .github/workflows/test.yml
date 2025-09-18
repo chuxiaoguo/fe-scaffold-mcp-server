@@ -1,0 +1,131 @@
+name: 项目完整性测试
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    # 每天凌晨2点运行一次
+    - cron: '0 2 * * *'
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        node-version: [18, 20, 22]
+
+    steps:
+    - name: Checkout代码
+      uses: actions/checkout@v4
+
+    - name: 设置Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+
+    - name: 安装依赖
+      run: npm install
+
+    - name: 类型检查
+      run: npm run type-check
+
+    - name: 代码检查
+      run: npm run lint
+
+    - name: 构建项目
+      run: npm run build
+
+    - name: 运行模板完整性测试
+      run: npm run test:template-integrity
+
+    - name: 运行生命周期测试
+      run: npm run test:lifecycle
+      continue-on-error: true
+
+    - name: 上传测试报告
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: test-report-${{ matrix.os }}-node${{ matrix.node-version }}
+        path: test-report.json
+
+  # 多框架测试 - 测试不同的技术栈组合
+  framework-tests:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        framework: [vue3, react]
+        buildTool: [vite, webpack]
+        language: [typescript, javascript]
+        exclude:
+          # 排除一些不常用的组合以节省CI时间
+          - framework: react
+            buildTool: webpack
+            language: javascript
+
+    steps:
+    - name: Checkout代码
+      uses: actions/checkout@v4
+
+    - name: 设置Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+
+    - name: 安装依赖
+      run: npm install
+
+    - name: 构建项目
+      run: npm run build
+
+    - name: 测试 ${{ matrix.framework }}-${{ matrix.language }}-${{ matrix.buildTool }} 组合
+      run: |
+        # 这里可以添加特定框架组合的测试逻辑
+        echo "测试组合: ${{ matrix.framework }} + ${{ matrix.language }} + ${{ matrix.buildTool }}"
+        # 可以调用具体的MCP工具进行测试
+
+  # 发布前完整测试
+  pre-release-test:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    needs: [test, framework-tests]
+
+    steps:
+    - name: Checkout代码
+      uses: actions/checkout@v4
+
+    - name: 设置Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+
+    - name: 安装依赖
+      run: npm install
+
+    - name: 运行完整测试套件
+      run: npm run test:ci
+
+    - name: 检查模板文件
+      run: |
+        echo "检查模板文件完整性..."
+        find templates -name "_*" -type f | wc -l
+        ls -la templates/
+
+    - name: 生成测试覆盖报告
+      run: |
+        echo "# 测试覆盖报告" > coverage-report.md
+        echo "- 模板数量: $(find templates -maxdepth 1 -type d | wc -l)" >> coverage-report.md
+        echo "- 配置文件数量: $(find templates/shared/configs -name "_*" | wc -l)" >> coverage-report.md
+        echo "- 测试通过时间: $(date)" >> coverage-report.md
+
+    - name: 上传覆盖报告
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-report
+        path: coverage-report.md

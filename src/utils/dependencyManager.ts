@@ -132,7 +132,7 @@ export class DependencyManager {
           DependencyTypeEnum.DEVELOPMENT
         ),
       ],
-      lsLint: [this.dep("ls-lint", "^2.2.3", DependencyTypeEnum.DEVELOPMENT)],
+      lsLint: [this.dep("ls-lint", "^0.1.2", DependencyTypeEnum.DEVELOPMENT)],
       husky: [this.dep("husky", "^8.0.3", DependencyTypeEnum.DEVELOPMENT)],
       editorconfig: [
         // EditorConfig 本身不需要 npm 包，只需要 .editorconfig 文件

@@ -6,7 +6,7 @@ const App: React.FC = () => {
     <div className="app">
       <header className="header">
         <h1>欢迎使用 React</h1>
-        <p>这是一个使用 Vite + TypeScript + {{ STYLE_FRAMEWORK }} 构建的项目</p>
+        <p>这是一个使用 Vite + TypeScript + Ant Design 构建的项目</p>
       </header>
 
       <main className="main">

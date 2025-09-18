@@ -1,5 +1,5 @@
 {
-  "timestamp": "2025-09-18T13:02:26.849Z",
+  "timestamp": "2025-09-18T17:27:50.052Z",
   "scaffold": {
     "total": 3,
     "passed": 3,
@@ -7,7 +7,7 @@
       {
         "testCase": "vue3-typescript-vite",
         "success": true,
-        "projectPath": "/Users/zcg/Desktop/open-source/mcp-server/fe-scaffold-mcp-server/test-output/test-vue3-app",
+        "projectPath": "D:\\pingan\\fe-scaffold-mcp-server\\test-output\\test-vue3-app",
         "config": {
           "projectName": "test-vue3-app",
           "framework": "vue3",
@@ -25,7 +25,7 @@
       {
         "testCase": "react-typescript-vite",
         "success": true,
-        "projectPath": "/Users/zcg/Desktop/open-source/mcp-server/fe-scaffold-mcp-server/test-output/test-react-app",
+        "projectPath": "D:\\pingan\\fe-scaffold-mcp-server\\test-output\\test-react-app",
         "config": {
           "projectName": "test-react-app",
           "framework": "react",
@@ -43,7 +43,7 @@
       {
         "testCase": "vue2-javascript-webpack",
         "success": true,
-        "projectPath": "/Users/zcg/Desktop/open-source/mcp-server/fe-scaffold-mcp-server/test-output/test-vue2-app",
+        "projectPath": "D:\\pingan\\fe-scaffold-mcp-server\\test-output\\test-vue2-app",
         "config": {
           "projectName": "test-vue2-app",
           "framework": "vue2",

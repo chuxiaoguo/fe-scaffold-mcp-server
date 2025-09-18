@@ -55,13 +55,25 @@ export class TemplateCustomizer {
 
     try {
       const content = await fs.readFile(packageJsonPath, "utf-8");
+      
+      // 调试信息：打印完整的原始内容
+      console.log("[DEBUG] Raw package.json content:");
+      console.log(content);
+      console.log("[DEBUG] End of raw content");
+      
       const packageJson = JSON.parse(content);
 
+      // 调试信息：打印初始状态
+      console.log("[DEBUG] Initial package.json dependencies:", packageJson.dependencies);
+      
       // 获取依赖信息
       const { dependencies, devDependencies } =
         DependencyManager.getDependencies(options);
       const scripts = DependencyManager.generateScripts(options);
 
+      // 调试信息：打印DependencyManager生成的依赖
+      console.log("[DEBUG] DependencyManager dependencies:", dependencies.map(d => `${d.name}@${d.version}`));
+      
       // 更新 package.json
       packageJson.name = projectName;
       packageJson.scripts = { ...packageJson.scripts, ...scripts };
@@ -69,6 +81,9 @@ export class TemplateCustomizer {
       // 合并依赖
       packageJson.dependencies = packageJson.dependencies || {};
       packageJson.devDependencies = packageJson.devDependencies || {};
+
+      // 调试信息：打印删除占位符后的状态
+      console.log("[DEBUG] After deleting placeholders:", packageJson.dependencies);
 
       dependencies.forEach((dep) => {
         packageJson.dependencies[dep.name] = dep.version;
@@ -86,6 +101,9 @@ export class TemplateCustomizer {
         options.styleFramework,
         ...(options.uiLibrary ? [options.uiLibrary] : []),
       ];
+
+      // 调试信息：打印最终结果
+      console.log("[DEBUG] Final package.json dependencies:", packageJson.dependencies);
 
       // 写入更新的 package.json
       await fs.writeFile(packageJsonPath, JSON.stringify(packageJson, null, 2));
