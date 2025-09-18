@@ -4,6 +4,8 @@
 
 你遇到的错误 `could not determine executable to run` 已经在版本 **1.0.2** 中修复。
 
+新的路径解析问题（`no such file or directory`）已在版本 **1.0.3** 中修复。
+
 ## 正确的 MCP 配置
 
 更新后的配置应该可以正常工作：
@@ -15,7 +17,7 @@
       "command": "npx",
       "args": [
         "-y",
-        "fe-scaffold-mcp-server@1.0.2"
+        "fe-scaffold-mcp-server@1.0.3"
       ]
     }
   }
@@ -24,11 +26,11 @@
 
 ## 修复内容
 
-在版本 1.0.2 中，我们添加了：
+在版本 1.0.3 中，我们修复了：
 
-1. **bin 字段**: 在 package.json 中指定可执行文件入口点
-2. **files 字段**: 确保发布时包含所有必要文件
-3. **可执行权限**: 确保 dist/index.js 具有执行权限
+1. **模板路径解析**: 使用包安装路径而非当前工作目录
+2. **项目创建安全性**: 防止在系统目录创建项目
+3. **缺失配置文件**: 添加了 `tailwind.config.cjs` 配置文件
 
 ## 测试方法
 

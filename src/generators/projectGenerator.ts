@@ -22,9 +22,13 @@ export class ProjectGenerator {
   }> {
     // 确定输出路径
     const projectPath = outputPath || resolve(process.cwd(), projectName);
-    
+
     // 确保项目路径不是根目录或系统目录
-    if (projectPath === '/' || projectPath.startsWith('/usr') || projectPath.startsWith('/System')) {
+    if (
+      projectPath === "/" ||
+      projectPath.startsWith("/usr") ||
+      projectPath.startsWith("/System")
+    ) {
       throw new Error(`不能在系统目录创建项目: ${projectPath}`);
     }
 
