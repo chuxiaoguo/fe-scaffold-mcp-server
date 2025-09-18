@@ -72,6 +72,7 @@ export class StackValidator {
     errors: string[],
     _warnings: string[]
   ): void {
+    void _warnings; // 消除未使用变量警告
     if (!options.uiLibrary) return;
 
     const compatibilityMap = {
@@ -93,16 +94,16 @@ export class StackValidator {
   private static validateTestingFramework(
     options: ScaffoldOptions,
     errors: string[],
-    warnings: string[]
+    _warnings: string[]
   ): void {
     // Vitest 主要为 Vite 项目设计
     if (options.testing.framework === 'vitest' && options.buildTool === 'webpack') {
-      warnings.push('Vitest主要为Vite项目设计，Webpack项目推荐使用Jest');
+      _warnings.push('Vitest主要为Vite项目设计，Webpack项目推荐使用Jest');
     }
 
     // Jest 在 Vite 项目中需要额外配置
     if (options.testing.framework === 'jest' && options.buildTool === 'vite') {
-      warnings.push('Jest在Vite项目中需要额外的配置，推荐使用Vitest');
+      _warnings.push('Jest在Vite项目中需要额外的配置，推荐使用Vitest');
     }
   }
 
@@ -112,21 +113,21 @@ export class StackValidator {
   private static validateMockSolution(
     options: ScaffoldOptions,
     errors: string[],
-    warnings: string[]
+    _warnings: string[]
   ): void {
     const { buildTool, testing } = options;
 
     // Vite项目的Mock方案检查
     if (buildTool === 'vite') {
       if (!['msw', 'vite-plugin-mock'].includes(testing.mockSolution)) {
-        warnings.push(`Mock方案 ${testing.mockSolution} 不是Vite项目的推荐选择`);
+        _warnings.push(`Mock方案 ${testing.mockSolution} 不是Vite项目的推荐选择`);
       }
     }
 
     // Webpack项目的Mock方案检查
     if (buildTool === 'webpack') {
       if (!['webpack-proxy', 'mocker-api', 'msw'].includes(testing.mockSolution)) {
-        warnings.push(`Mock方案 ${testing.mockSolution} 不是Webpack项目的推荐选择`);
+        _warnings.push(`Mock方案 ${testing.mockSolution} 不是Webpack项目的推荐选择`);
       }
     }
   }
@@ -137,7 +138,7 @@ export class StackValidator {
   private static validateStyleFramework(
     options: ScaffoldOptions,
     _errors: string[],
-    warnings: string[]
+    _warnings: string[]
   ): void {
     // Tailwind CSS 在所有框架中都支持
     if (options.styleFramework === 'tailwind') {
@@ -147,7 +148,7 @@ export class StackValidator {
     // Sass/Less 需要相应的loader或插件
     if (['sass', 'less'].includes(options.styleFramework)) {
       if (options.buildTool === 'webpack') {
-        warnings.push(`${options.styleFramework}需要在Webpack中配置相应的loader`);
+        _warnings.push(`${options.styleFramework}需要在Webpack中配置相应的loader`);
       }
     }
   }
@@ -158,8 +159,9 @@ export class StackValidator {
   private static validateBundleAnalyzer(
     options: ScaffoldOptions,
     errors: string[],
-    warnings: string[]
+    _warnings: string[]
   ): void {
+    void _warnings; // 消除未使用变量警告
     // 检查打包分析工具与构建工具的匹配
     if (options.buildTool === 'vite' && options.bundleAnalyzer === 'webpack-bundle-analyzer') {
       errors.push('Vite项目应该使用rollup-plugin-visualizer而不是webpack-bundle-analyzer');
