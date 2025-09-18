@@ -1,6 +1,6 @@
-import { promises as fs } from 'fs';
-import { dirname, join } from 'path';
-import { GeneratedFile } from '../types.js';
+import { promises as fs } from "fs";
+import { dirname, join } from "path";
+import { GeneratedFile } from "../types.js";
 
 /**
  * 文件操作工具类
@@ -23,14 +23,14 @@ export class FileUtils {
   static async writeFile(filePath: string, content: string): Promise<void> {
     const dir = dirname(filePath);
     await this.ensureDir(dir);
-    await fs.writeFile(filePath, content, 'utf-8');
+    await fs.writeFile(filePath, content, "utf-8");
   }
 
   /**
    * 批量写入文件
    */
   static async writeFiles(
-    outputDir: string, 
+    outputDir: string,
     files: GeneratedFile[]
   ): Promise<{ success: string[]; failed: { file: string; error: string }[] }> {
     const success: string[] = [];
@@ -71,7 +71,7 @@ export class FileUtils {
    * 读取文件内容
    */
   static async readFile(filePath: string): Promise<string> {
-    return fs.readFile(filePath, 'utf-8');
+    return fs.readFile(filePath, "utf-8");
   }
 
   /**
@@ -81,65 +81,5 @@ export class FileUtils {
     const dir = dirname(dest);
     await this.ensureDir(dir);
     await fs.copyFile(src, dest);
-  }
-
-  /**
-   * 创建项目目录结构
-   */
-  static async createProjectStructure(
-    projectPath: string,
-    structure: Record<string, string | null>
-  ): Promise<void> {
-    for (const [path, content] of Object.entries(structure)) {
-      const fullPath = join(projectPath, path);
-      
-      if (content === null) {
-        // 创建目录
-        await this.ensureDir(fullPath);
-      } else {
-        // 创建文件
-        await this.writeFile(fullPath, content);
-      }
-    }
-  }
-
-  /**
-   * 获取项目模板路径
-   */
-  static getTemplatePath(framework: string, fileName: string): string {
-    return join(process.cwd(), 'src', 'templates', 'frameworks', framework, fileName);
-  }
-
-  /**
-   * 替换模板变量
-   */
-  static replaceTemplateVariables(
-    content: string, 
-    variables: Record<string, string>
-  ): string {
-    let result = content;
-    
-    for (const [key, value] of Object.entries(variables)) {
-      const regex = new RegExp(`{{${key}}}`, 'g');
-      result = result.replace(regex, value);
-    }
-    
-    return result;
-  }
-
-  /**
-   * 生成基础项目结构
-   */
-  static generateBaseStructure(projectName: string): Record<string, string | null> {
-    return {
-      'src': null,
-      'src/components': null,
-      'src/views': null,
-      'src/utils': null,
-      'src/types': null,
-      'src/assets': null,
-      'public': null,
-      'tests': null,
-    };
   }
 }
