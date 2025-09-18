@@ -10,10 +10,22 @@ const __dirname = dirname(__filename);
  * 模板复制器 - 负责复制基础模板文件
  */
 export class TemplateCopier {
-  private static readonly TEMPLATE_BASE_PATH = resolve(
-    __dirname,
-    "../../templates"
-  );
+  private static getTemplateBasePath(): string {
+    // 在开发环境中，从src/generators指向templates
+    // 在npm包中，从dist/generators指向templates
+    const currentDir = __dirname;
+    
+    // 检查是否在dist目录中（npm包环境）
+    if (currentDir.includes('/dist/')) {
+      // 在npm包中，从dist/generators回到包根目录
+      return resolve(currentDir, '../../../templates');
+    } else {
+      // 在开发环境中，从src/generators回到项目根目录
+      return resolve(currentDir, '../../templates');
+    }
+  }
+
+  private static readonly TEMPLATE_BASE_PATH = this.getTemplateBasePath();
 
   /**
    * 复制基础模板到目标目录
@@ -23,7 +35,8 @@ export class TemplateCopier {
     targetPath: string
   ): Promise<{ success: string[]; failed: { file: string; error: string }[] }> {
     const templateName = this.getTemplateName(options);
-    const templatePath = join(this.TEMPLATE_BASE_PATH, templateName);
+    const templateBasePath = this.getTemplateBasePath();
+    const templatePath = join(templateBasePath, templateName);
 
     const result = {
       success: [] as string[],
@@ -31,6 +44,13 @@ export class TemplateCopier {
     };
 
     try {
+      // 添加调试信息
+      console.debug('Template resolution debug:');
+      console.debug('  __dirname:', __dirname);
+      console.debug('  templateBasePath:', templateBasePath);
+      console.debug('  templateName:', templateName);
+      console.debug('  templatePath:', templatePath);
+      
       // 检查模板是否存在
       await fs.access(templatePath);
 
@@ -39,11 +59,16 @@ export class TemplateCopier {
 
       return result;
     } catch (error) {
+      // 添加更详细的错误信息
+      const errorMsg = `模板不存在: ${error instanceof Error ? error.message : String(error)}
+调试信息:
+  模板基础路径: ${templateBasePath}
+  模板名称: ${templateName}
+  完整模板路径: ${templatePath}`;
+      
       result.failed.push({
         file: templatePath,
-        error: `模板不存在: ${
-          error instanceof Error ? error.message : String(error)
-        }`,
+        error: errorMsg,
       });
       return result;
     }
@@ -155,7 +180,8 @@ export class TemplateCopier {
     options: ScaffoldOptions,
     targetPath: string
   ): Promise<{ success: string[]; failed: { file: string; error: string }[] }> {
-    const sharedPath = join(this.TEMPLATE_BASE_PATH, "shared");
+    const templateBasePath = this.getTemplateBasePath();
+    const sharedPath = join(templateBasePath, "shared");
     const result = {
       success: [] as string[],
       failed: [] as { file: string; error: string }[],
