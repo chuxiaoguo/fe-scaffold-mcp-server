@@ -2,7 +2,8 @@ import { Tool } from "@modelcontextprotocol/sdk/types.js";
 import { ScaffoldOptions, CreateScaffoldParams } from "../types.js";
 import { StackValidator } from "../utils/stackValidator.js";
 import { ProjectGenerator } from "../generators/projectGenerator.js";
-import { resolve } from "path";
+import { resolve, join, isAbsolute } from "path";
+import { existsSync } from "fs";
 
 /**
  * 创建脚手架工具
@@ -15,7 +16,11 @@ export const createScaffoldTool: Tool = {
     properties: {
       projectName: {
         type: "string",
-        description: "项目名称",
+        description: "项目名称，如不指定则使用模板默认名称（如vue3-vite）",
+      },
+      projectPath: {
+        type: "string",
+        description: "项目创建路径，支持绝对路径。如不指定则使用当前工作目录",
       },
       framework: {
         type: "string",
@@ -72,7 +77,7 @@ export const createScaffoldTool: Tool = {
         description: "UI组件库，不指定则根据框架自动选择",
       },
     },
-    required: ["projectName", "framework"],
+    required: ["framework"],
   },
 };
 
@@ -95,8 +100,8 @@ export async function handleCreateScaffold(
     // 自动修复配置
     const fixedOptions = StackValidator.autoFix(options);
 
-    // 生成项目
-    const projectPath = resolve(process.cwd(), params.projectName);
+    // 确定项目路径和项目名称
+    const { projectPath, projectName } = resolveProjectPathAndName(params, fixedOptions);
 
     // 确保项目路径不是根目录或系统目录
     if (
@@ -108,7 +113,7 @@ export async function handleCreateScaffold(
     }
     const result = await ProjectGenerator.generateProject(
       fixedOptions,
-      params.projectName,
+      projectName,
       projectPath
     );
 
@@ -122,7 +127,7 @@ export async function handleCreateScaffold(
     const stats = ProjectGenerator.generateProjectStats(result.success);
 
     // 构建响应消息
-    let response = `✅ 成功创建 ${params.projectName} 脚手架\n\n`;
+    let response = `✅ 成功创建 ${projectName} 脚手架\n\n`;
     response += `📁 **项目路径**: ${result.projectPath}\n\n`;
 
     response += `📋 **技术栈配置**\n`;
@@ -182,7 +187,7 @@ export async function handleCreateScaffold(
 
     response += `🚀 **快速开始**\n`;
     response += `\`\`\`bash\n`;
-    response += `cd ${params.projectName}\n`;
+    response += `cd ${projectName}\n`;
     response += `npm install\n`;
     response += `npm run dev\n`;
     response += `\`\`\``;
@@ -245,4 +250,134 @@ function buildScaffoldOptions(params: CreateScaffoldParams): ScaffoldOptions {
   };
 
   return options;
+}
+
+/**
+ * 获取当前编辑器打开的工程根路径
+ * 按优先级检查环境变量
+ */
+function getWorkspaceRoot(): string {
+  // 优先使用环境变量中的工作目录（编辑器打开的工程路径）
+  const workspaceRoot = process.env.WORKSPACE_ROOT || 
+                       process.env.VSCODE_CWD || 
+                       process.env.PWD ||
+                       process.cwd();
+  
+  return workspaceRoot;
+}
+
+/**
+ * 根据优先级确定项目路径和项目名称
+ * 路径优先级：
+ * 1. 用户指定的相对路径（相对当前编辑器打开工程路径）或指定的绝对路径（最高优先级）
+ * 2. 用户当前编辑器打开工程的路径
+ * 3. fe-scaffold的安装路径（最低优先级）
+ * 
+ * 项目名称：
+ * 1. 用户指定的项目名称
+ * 2. 模板默认名称（如vue3-vite）
+ */
+function resolveProjectPathAndName(
+  params: CreateScaffoldParams,
+  options: ScaffoldOptions
+): { projectPath: string; projectName: string } {
+  // 1. 确定基础路径
+  let basePath: string;
+  
+  if (params.projectPath) {
+    // 用户指定了路径（最高优先级）
+    if (isAbsolute(params.projectPath)) {
+      // 用户指定的绝对路径
+      basePath = params.projectPath;
+    } else {
+      // 用户指定的相对路径，需要相对于当前编辑器打开的工程路径
+      // 首先获取当前编辑器打开的工程路径
+      const workspaceRoot = getWorkspaceRoot();
+      basePath = resolve(workspaceRoot, params.projectPath);
+    }
+  } else {
+    // 用户未指定路径，使用编辑器打开的工程路径（优先级2）
+    const workspaceRoot = getWorkspaceRoot();
+    
+    // 检查是否在有效的工作空间中（包含package.json等）
+    const potentialWorkspaces = [
+      workspaceRoot,
+      process.cwd() // fe-scaffold的安装路径（最低优先级）
+    ];
+    
+    basePath = findValidWorkspace(potentialWorkspaces) || process.cwd();
+  }
+  
+  // 2. 确定项目名称
+  let projectName: string;
+  
+  if (params.projectName && params.projectName.trim()) {
+    // 用户指定了项目名称
+    projectName = params.projectName.trim();
+  } else {
+    // 使用模板默认名称
+    projectName = getTemplateDefaultName(options);
+  }
+  
+  // 3. 构建最终项目路径
+  const finalProjectPath = join(basePath, projectName);
+  
+  return {
+    projectPath: finalProjectPath,
+    projectName
+  };
+}
+
+/**
+ * 查找有效的工作空间目录
+ * 判断标准：包含package.json、.git目录、或其他项目标识文件
+ */
+function findValidWorkspace(candidates: string[]): string | null {
+  for (const candidate of candidates) {
+    if (!candidate) continue;
+    
+    try {
+      // 检查是否包含常见的项目标识文件
+      const indicators = [
+        join(candidate, 'package.json'),
+        join(candidate, '.git'),
+        join(candidate, 'yarn.lock'),
+        join(candidate, 'pnpm-lock.yaml'),
+        join(candidate, 'tsconfig.json'),
+        join(candidate, 'vite.config.ts'),
+        join(candidate, 'vite.config.js'),
+        join(candidate, 'webpack.config.js')
+      ];
+      
+      // 如果存在任何一个指示文件/目录，认为这是一个有效的工作空间
+      if (indicators.some(indicator => existsSync(indicator))) {
+        return candidate;
+      }
+    } catch (error) {
+      // 忽略访问错误，继续检查下一个候选路径
+      continue;
+    }
+  }
+  
+  return null;
+}
+
+/**
+ * 根据技术栈获取模板默认名称
+ */
+function getTemplateDefaultName(options: ScaffoldOptions): string {
+  const { framework, buildTool } = options;
+  
+  // 构建模板名称映射
+  const templateNameMap: Record<string, string> = {
+    'vue3-vite': 'vue3-vite',
+    'vue3-webpack': 'vue3-webpack', 
+    'vue2-vite': 'vue2-vite',
+    'vue2-webpack': 'vue2-webpack',
+    'react-vite': 'react-vite', 
+    'react-webpack': 'react-webpack'
+  };
+  
+  const key = `${framework}-${buildTool}`;
+  return templateNameMap[key] || 'vue3-vite';
 }

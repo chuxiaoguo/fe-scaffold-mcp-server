@@ -14,7 +14,7 @@ export const previewConfigTool: Tool = {
     properties: {
       projectName: {
         type: "string",
-        description: "项目名称",
+        description: "项目名称，如不指定则使用模板默认名称（如vue3-vite）",
       },
       framework: {
         type: "string",
@@ -76,7 +76,7 @@ export const previewConfigTool: Tool = {
         default: false,
       },
     },
-    required: ["projectName", "framework"],
+    required: ["framework"],
   },
 };
 
@@ -95,7 +95,10 @@ export async function handlePreviewConfig(
     const { dependencies, devDependencies } =
       DependencyManager.getDependencies(fixedOptions);
 
-    let response = `🔍 **项目配置预览**: ${params.projectName}\n\n`;
+    // 确定项目名称
+    const projectName = params.projectName || getDefaultProjectName(fixedOptions);
+
+    let response = `🔍 **项目配置预览**: ${projectName}\n\n`;
 
     // 技术栈配置
     response += `📋 **技术栈配置**\n`;
@@ -121,7 +124,7 @@ export async function handlePreviewConfig(
 
     // 项目结构预览
     response += `📁 **项目结构预览**\n`;
-    response += generateProjectStructure(fixedOptions, params.projectName);
+    response += generateProjectStructure(fixedOptions, projectName);
 
     // 依赖信息
     response += `\n📦 **依赖包信息**\n`;
@@ -218,4 +221,22 @@ function buildScaffoldOptions(params: CreateScaffoldParams): ScaffoldOptions {
         : "webpack-bundle-analyzer"
       : "rollup-plugin-visualizer",
   };
+}
+
+/**
+ * 获取默认项目名称
+ */
+function getDefaultProjectName(options: ScaffoldOptions): string {
+  const { framework, buildTool } = options;
+  const templateNameMap: Record<string, string> = {
+    'vue3-vite': 'vue3-vite',
+    'vue3-webpack': 'vue3-webpack', 
+    'vue2-vite': 'vue2-vite',
+    'vue2-webpack': 'vue2-webpack',
+    'react-vite': 'react-vite', 
+    'react-webpack': 'react-webpack'
+  };
+  
+  const key = `${framework}-${buildTool}`;
+  return templateNameMap[key] || 'vue3-vite';
 }

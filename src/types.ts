@@ -162,7 +162,8 @@ export interface StackTemplate {
 
 // ====================== MCP工具参数 ======================
 export interface CreateScaffoldParams {
-  readonly projectName: string;
+  readonly projectName?: string;
+  readonly projectPath?: string;
   readonly framework: string;
   readonly language?: string;
   readonly buildTool?: string;
