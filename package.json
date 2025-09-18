@@ -1,6 +1,6 @@
 {
   "name": "fe-scaffold-mcp-server",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "Frontend Scaffold MCP Server - A Model Context Protocol server for generating frontend project scaffolds",
   "main": "dist/index.js",
   "bin": {
