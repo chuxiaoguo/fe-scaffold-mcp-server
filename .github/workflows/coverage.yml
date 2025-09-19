@@ -1,0 +1,346 @@
+name: 📊 代码覆盖率报告
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'src/**/*.ts'
+      - 'tests/**/*'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/**/*.ts'  
+      - 'tests/**/*'
+  workflow_dispatch:
+
+jobs:
+  coverage:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        node-version: [18, 20]
+
+    steps:
+      - name: Checkout代码
+        uses: actions/checkout@v4
+
+      - name: 设置Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: 安装依赖
+        run: npm ci
+
+      - name: 构建项目
+        run: npm run build
+
+      - name: 运行覆盖率测试
+        run: npm run test:coverage
+
+      - name: 生成覆盖率报告摘要
+        run: |
+          if [ -f coverage/coverage-summary.json ]; then
+            echo "📊 代码覆盖率报告摘要" > coverage-summary.md
+            echo "========================" >> coverage-summary.md
+            echo "" >> coverage-summary.md
+            
+            # 提取覆盖率数据
+            lines_pct=$(node -p "require('./coverage/coverage-summary.json').total.lines.pct")
+            functions_pct=$(node -p "require('./coverage/coverage-summary.json').total.functions.pct")
+            branches_pct=$(node -p "require('./coverage/coverage-summary.json').total.branches.pct")
+            statements_pct=$(node -p "require('./coverage/coverage-summary.json').total.statements.pct")
+            
+            echo "| 指标 | 覆盖率 | 状态 |" >> coverage-summary.md
+            echo "|------|--------|------|" >> coverage-summary.md
+            echo "| 行覆盖率 | ${lines_pct}% | $([ $lines_pct -ge 80 ] && echo '✅ 良好' || echo '⚠️ 需改进') |" >> coverage-summary.md
+            echo "| 函数覆盖率 | ${functions_pct}% | $([ $functions_pct -ge 80 ] && echo '✅ 良好' || echo '⚠️ 需改进') |" >> coverage-summary.md
+            echo "| 分支覆盖率 | ${branches_pct}% | $([ $branches_pct -ge 70 ] && echo '✅ 良好' || echo '⚠️ 需改进') |" >> coverage-summary.md
+            echo "| 语句覆盖率 | ${statements_pct}% | $([ $statements_pct -ge 80 ] && echo '✅ 良好' || echo '⚠️ 需改进') |" >> coverage-summary.md
+            echo "" >> coverage-summary.md
+            echo "**报告时间:** $(date)" >> coverage-summary.md
+            echo "**平台:** ${{ matrix.os }}" >> coverage-summary.md
+            echo "**Node.js版本:** ${{ matrix.node-version }}" >> coverage-summary.md
+            
+            # 设置环境变量供后续步骤使用
+            echo "LINES_COVERAGE=$lines_pct" >> $GITHUB_ENV
+            echo "FUNCTIONS_COVERAGE=$functions_pct" >> $GITHUB_ENV
+            echo "BRANCHES_COVERAGE=$branches_pct" >> $GITHUB_ENV
+            echo "STATEMENTS_COVERAGE=$statements_pct" >> $GITHUB_ENV
+          fi
+
+      - name: 检查覆盖率阈值
+        run: |
+          # 设置覆盖率阈值
+          MIN_LINES_COVERAGE=75
+          MIN_FUNCTIONS_COVERAGE=75
+          MIN_BRANCHES_COVERAGE=65
+          MIN_STATEMENTS_COVERAGE=75
+          
+          echo "🎯 检查覆盖率阈值..."
+          echo "  最低行覆盖率要求: ${MIN_LINES_COVERAGE}%"
+          echo "  最低函数覆盖率要求: ${MIN_FUNCTIONS_COVERAGE}%"
+          echo "  最低分支覆盖率要求: ${MIN_BRANCHES_COVERAGE}%"
+          echo "  最低语句覆盖率要求: ${MIN_STATEMENTS_COVERAGE}%"
+          echo ""
+          
+          # 检查是否满足阈值
+          THRESHOLD_FAILED=false
+          
+          if [ "${LINES_COVERAGE%.*}" -lt "$MIN_LINES_COVERAGE" ]; then
+            echo "❌ 行覆盖率 ${LINES_COVERAGE}% 低于最低要求 ${MIN_LINES_COVERAGE}%"
+            THRESHOLD_FAILED=true
+          else
+            echo "✅ 行覆盖率 ${LINES_COVERAGE}% 满足要求"
+          fi
+          
+          if [ "${FUNCTIONS_COVERAGE%.*}" -lt "$MIN_FUNCTIONS_COVERAGE" ]; then
+            echo "❌ 函数覆盖率 ${FUNCTIONS_COVERAGE}% 低于最低要求 ${MIN_FUNCTIONS_COVERAGE}%"
+            THRESHOLD_FAILED=true
+          else
+            echo "✅ 函数覆盖率 ${FUNCTIONS_COVERAGE}% 满足要求"
+          fi
+          
+          if [ "${BRANCHES_COVERAGE%.*}" -lt "$MIN_BRANCHES_COVERAGE" ]; then
+            echo "❌ 分支覆盖率 ${BRANCHES_COVERAGE}% 低于最低要求 ${MIN_BRANCHES_COVERAGE}%"
+            THRESHOLD_FAILED=true
+          else
+            echo "✅ 分支覆盖率 ${BRANCHES_COVERAGE}% 满足要求"
+          fi
+          
+          if [ "${STATEMENTS_COVERAGE%.*}" -lt "$MIN_STATEMENTS_COVERAGE" ]; then
+            echo "❌ 语句覆盖率 ${STATEMENTS_COVERAGE}% 低于最低要求 ${MIN_STATEMENTS_COVERAGE}%"
+            THRESHOLD_FAILED=true
+          else
+            echo "✅ 语句覆盖率 ${STATEMENTS_COVERAGE}% 满足要求"
+          fi
+          
+          if [ "$THRESHOLD_FAILED" = true ]; then
+            echo ""
+            echo "⚠️ 部分覆盖率指标未达到最低要求，请增加测试用例"
+            exit 1
+          else
+            echo ""
+            echo "🎉 所有覆盖率指标都达到要求！"
+          fi
+
+      - name: 上传覆盖率报告到Codecov
+        uses: codecov/codecov-action@v3
+        if: matrix.os == 'ubuntu-latest' && matrix.node-version == '20'
+        with:
+          file: ./coverage/lcov.info
+          flags: unittests
+          name: codecov-${{ matrix.os }}-node${{ matrix.node-version }}
+          fail_ci_if_error: false
+
+      - name: 生成覆盖率徽章数据
+        if: matrix.os == 'ubuntu-latest' && matrix.node-version == '20'
+        run: |
+          # 生成徽章数据
+          if [ -f coverage/coverage-summary.json ]; then
+            lines_pct=$(node -p "require('./coverage/coverage-summary.json').total.lines.pct")
+            
+            # 确定徽章颜色
+            if [ "${lines_pct%.*}" -ge 80 ]; then
+              badge_color="brightgreen"
+            elif [ "${lines_pct%.*}" -ge 70 ]; then
+              badge_color="yellow"
+            else
+              badge_color="red"
+            fi
+            
+            # 生成shields.io格式的JSON
+            cat > coverage-badge.json << EOF
+            {
+              "schemaVersion": 1,
+              "label": "coverage",
+              "message": "${lines_pct}%",
+              "color": "${badge_color}"
+            }
+            EOF
+            
+            echo "📛 生成覆盖率徽章数据: ${lines_pct}% (${badge_color})"
+          fi
+
+      - name: 分析覆盖率变化趋势
+        if: matrix.os == 'ubuntu-latest' && matrix.node-version == '20'
+        run: |
+          # 如果存在之前的覆盖率数据，进行对比
+          if [ -f previous-coverage.json ] && [ -f coverage/coverage-summary.json ]; then
+            echo "📈 分析覆盖率变化趋势..."
+            
+            prev_lines=$(node -p "require('./previous-coverage.json').total.lines.pct")
+            curr_lines=$(node -p "require('./coverage/coverage-summary.json').total.lines.pct")
+            
+            # 计算变化
+            change=$(node -p "(${curr_lines} - ${prev_lines}).toFixed(2)")
+            
+            if [ "${change%.*}" -gt 0 ]; then
+              echo "✅ 覆盖率提升了 ${change}%"
+            elif [ "${change%.*}" -lt 0 ]; then
+              echo "⚠️ 覆盖率下降了 ${change}%"
+            else
+              echo "📊 覆盖率保持不变"
+            fi
+            
+            echo "COVERAGE_CHANGE=${change}" >> $GITHUB_ENV
+          else
+            echo "ℹ️ 无历史覆盖率数据进行对比"
+          fi
+
+      - name: 生成详细的覆盖率分析报告
+        if: matrix.os == 'ubuntu-latest' && matrix.node-version == '20'
+        run: |
+          if [ -f coverage/lcov.info ]; then
+            echo "📋 生成详细覆盖率分析报告..."
+            
+            # 创建详细报告
+            cat > detailed-coverage-report.md << 'EOF'
+            # 📊 详细代码覆盖率报告
+            
+            ## 📈 总体统计
+            EOF
+            
+            # 添加总体统计
+            if [ -f coverage/coverage-summary.json ]; then
+              echo "" >> detailed-coverage-report.md
+              echo "| 类型 | 覆盖数/总数 | 百分比 |" >> detailed-coverage-report.md
+              echo "|------|-------------|--------|" >> detailed-coverage-report.md
+              
+              # 提取详细数据
+              lines_covered=$(node -p "require('./coverage/coverage-summary.json').total.lines.covered")
+              lines_total=$(node -p "require('./coverage/coverage-summary.json').total.lines.total")
+              lines_pct=$(node -p "require('./coverage/coverage-summary.json').total.lines.pct")
+              
+              functions_covered=$(node -p "require('./coverage/coverage-summary.json').total.functions.covered")
+              functions_total=$(node -p "require('./coverage/coverage-summary.json').total.functions.total")
+              functions_pct=$(node -p "require('./coverage/coverage-summary.json').total.functions.pct")
+              
+              branches_covered=$(node -p "require('./coverage/coverage-summary.json').total.branches.covered")
+              branches_total=$(node -p "require('./coverage/coverage-summary.json').total.branches.total")
+              branches_pct=$(node -p "require('./coverage/coverage-summary.json').total.branches.pct")
+              
+              statements_covered=$(node -p "require('./coverage/coverage-summary.json').total.statements.covered")
+              statements_total=$(node -p "require('./coverage/coverage-summary.json').total.statements.total")
+              statements_pct=$(node -p "require('./coverage/coverage-summary.json').total.statements.pct")
+              
+              echo "| 行 | $lines_covered/$lines_total | $lines_pct% |" >> detailed-coverage-report.md
+              echo "| 函数 | $functions_covered/$functions_total | $functions_pct% |" >> detailed-coverage-report.md
+              echo "| 分支 | $branches_covered/$branches_total | $branches_pct% |" >> detailed-coverage-report.md
+              echo "| 语句 | $statements_covered/$statements_total | $statements_pct% |" >> detailed-coverage-report.md
+            fi
+            
+            # 添加文件级别的覆盖率分析（仅显示覆盖率较低的文件）
+            echo "" >> detailed-coverage-report.md
+            echo "## 🔍 需要关注的文件（覆盖率 < 80%）" >> detailed-coverage-report.md
+            echo "" >> detailed-coverage-report.md
+            
+            # 这里可以进一步分析lcov.info文件，提取文件级别的覆盖率信息
+            # 简化版本：只显示提示信息
+            echo "请查看生成的HTML报告获取详细的文件级别覆盖率信息。" >> detailed-coverage-report.md
+            echo "" >> detailed-coverage-report.md
+            echo "## 💡 改进建议" >> detailed-coverage-report.md
+            echo "- 为覆盖率较低的函数添加单元测试" >> detailed-coverage-report.md
+            echo "- 增加边界条件和异常情况的测试用例" >> detailed-coverage-report.md
+            echo "- 定期审查和更新测试用例" >> detailed-coverage-report.md
+            echo "" >> detailed-coverage-report.md
+            echo "---" >> detailed-coverage-report.md
+            echo "*报告生成时间: $(date)*" >> detailed-coverage-report.md
+          fi
+
+      - name: 上传覆盖率工件
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-report-${{ matrix.os }}-node${{ matrix.node-version }}
+          path: |
+            coverage/
+            coverage-summary.md
+            coverage-badge.json
+            detailed-coverage-report.md
+          retention-days: 30
+
+      - name: 评论PR覆盖率报告 (仅PR)
+        if: github.event_name == 'pull_request' && matrix.os == 'ubuntu-latest' && matrix.node-version == '20'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            
+            if (fs.existsSync('coverage-summary.md')) {
+              const coverageReport = fs.readFileSync('coverage-summary.md', 'utf8');
+              
+              const comment = `## 📊 代码覆盖率报告
+              
+              ${coverageReport}
+              
+              <details>
+              <summary>🔍 查看覆盖率详情</summary>
+              
+              - 📁 完整的HTML报告请查看Actions artifacts
+              - 🎯 覆盖率阈值：行≥75%, 函数≥75%, 分支≥65%, 语句≥75%
+              - 📈 [查看历史覆盖率趋势](https://codecov.io/gh/${{ github.repository }})
+              
+              </details>
+              
+              ---
+              *此报告由GitHub Actions自动生成 🤖*`;
+              
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: comment
+              });
+            }
+
+  # 汇总覆盖率报告
+  coverage-summary:
+    runs-on: ubuntu-latest
+    needs: coverage
+    if: always()
+    steps:
+      - name: 下载所有覆盖率报告
+        uses: actions/download-artifact@v4
+        with:
+          pattern: coverage-report-*
+          merge-multiple: true
+          path: all-coverage-reports/
+
+      - name: 生成汇总报告
+        run: |
+          echo "# 📊 覆盖率测试汇总报告" > coverage-summary-report.md
+          echo "" >> coverage-summary-report.md
+          echo "**测试时间:** $(date)" >> coverage-summary-report.md
+          echo "**测试分支:** ${{ github.ref_name }}" >> coverage-summary-report.md
+          echo "" >> coverage-summary-report.md
+          
+          # 统计测试结果
+          total_jobs=${{ strategy.job-total }}
+          success_jobs=0
+          
+          echo "## 📋 测试环境结果" >> coverage-summary-report.md
+          echo "| 操作系统 | Node.js版本 | 状态 |" >> coverage-summary-report.md
+          echo "|----------|-------------|------|" >> coverage-summary-report.md
+          
+          # 这里需要根据实际的job结果来填充表格
+          # 简化版本
+          echo "| Ubuntu | 18 | ${{ needs.coverage.result == 'success' && '✅ 通过' || '❌ 失败' }} |" >> coverage-summary-report.md
+          echo "| Ubuntu | 20 | ${{ needs.coverage.result == 'success' && '✅ 通过' || '❌ 失败' }} |" >> coverage-summary-report.md
+          echo "| Windows | 18 | ${{ needs.coverage.result == 'success' && '✅ 通过' || '❌ 失败' }} |" >> coverage-summary-report.md
+          echo "| Windows | 20 | ${{ needs.coverage.result == 'success' && '✅ 通过' || '❌ 失败' }} |" >> coverage-summary-report.md
+          echo "" >> coverage-summary-report.md
+          
+          if [ "${{ needs.coverage.result }}" == "success" ]; then
+            echo "🎉 所有环境的覆盖率测试都已通过！" >> coverage-summary-report.md
+          else
+            echo "⚠️ 部分环境的测试出现问题，请检查详细日志。" >> coverage-summary-report.md
+          fi
+
+      - name: 上传汇总报告
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-summary-report
+          path: coverage-summary-report.md
