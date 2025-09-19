@@ -1,0 +1,346 @@
+name: 📝 自动生成Changelog
+
+on:
+  workflow_run:
+    workflows: ["🚀 自动化发布流程"]
+    types:
+      - completed
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      version-range:
+        description: '版本范围 (留空为自动检测)'
+        required: false
+        type: string
+      update-readme:
+        description: '同时更新README徽章'
+        required: false
+        default: true
+        type: boolean
+
+jobs:
+  generate-changelog:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
+    
+    steps:
+      - name: Checkout代码
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 设置Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: 安装changelog生成工具
+        run: |
+          npm install -g conventional-changelog-cli auto-changelog
+
+      - name: 获取版本信息
+        id: version-info
+        run: |
+          current_version=$(node -p "require('./package.json').version")
+          echo "current_version=$current_version" >> $GITHUB_OUTPUT
+          
+          # 获取所有标签
+          git fetch --tags
+          
+          # 获取上一个版本标签
+          previous_tag=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          echo "previous_tag=$previous_tag" >> $GITHUB_OUTPUT
+          
+          # 确定版本范围
+          if [[ -n "${{ inputs.version-range }}" ]]; then
+            version_range="${{ inputs.version-range }}"
+          elif [[ -n "$previous_tag" ]]; then
+            version_range="$previous_tag..HEAD"
+          else
+            version_range="HEAD"
+          fi
+          echo "version_range=$version_range" >> $GITHUB_OUTPUT
+          
+          echo "📋 版本信息:"
+          echo "  当前版本: $current_version"
+          echo "  上一版本: $previous_tag"
+          echo "  版本范围: $version_range"
+
+      - name: 生成提交分类
+        id: categorize-commits
+        run: |
+          # 创建临时文件存储分类后的提交
+          mkdir -p temp
+          
+          # 获取提交列表
+          if [[ "${{ steps.version-info.outputs.version_range }}" == "HEAD" ]]; then
+            commits=$(git log --oneline --pretty=format:"%h|%s|%an|%ad" --date=short)
+          else
+            commits=$(git log --oneline --pretty=format:"%h|%s|%an|%ad" --date=short ${{ steps.version-info.outputs.version_range }})
+          fi
+          
+          # 分类提交
+          echo "$commits" | while IFS='|' read -r hash subject author date; do
+            # 跳过发布提交
+            if [[ "$subject" == *"chore: release"* ]] || [[ "$subject" == *"chore(release)"* ]]; then
+              continue
+            fi
+            
+            # 分类提交类型
+            if [[ "$subject" =~ ^feat(\(.+\))?!?: ]]; then
+              echo "$hash|$subject|$author|$date" >> temp/features.txt
+            elif [[ "$subject" =~ ^fix(\(.+\))?: ]]; then
+              echo "$hash|$subject|$author|$date" >> temp/fixes.txt
+            elif [[ "$subject" =~ ^perf(\(.+\))?: ]]; then
+              echo "$hash|$subject|$author|$date" >> temp/performance.txt
+            elif [[ "$subject" =~ ^docs(\(.+\))?: ]]; then
+              echo "$hash|$subject|$author|$date" >> temp/docs.txt
+            elif [[ "$subject" =~ ^style(\(.+\))?: ]]; then
+              echo "$hash|$subject|$author|$date" >> temp/style.txt
+            elif [[ "$subject" =~ ^refactor(\(.+\))?: ]]; then
+              echo "$hash|$subject|$author|$date" >> temp/refactor.txt
+            elif [[ "$subject" =~ ^test(\(.+\))?: ]]; then
+              echo "$hash|$subject|$author|$date" >> temp/tests.txt
+            elif [[ "$subject" =~ ^chore(\(.+\))?: ]]; then
+              echo "$hash|$subject|$author|$date" >> temp/chore.txt
+            elif [[ "$subject" =~ ^ci(\(.+\))?: ]]; then
+              echo "$hash|$subject|$author|$date" >> temp/ci.txt
+            else
+              echo "$hash|$subject|$author|$date" >> temp/other.txt
+            fi
+          done
+          
+          # 统计各类提交数量
+          features_count=$([ -f temp/features.txt ] && wc -l < temp/features.txt || echo 0)
+          fixes_count=$([ -f temp/fixes.txt ] && wc -l < temp/fixes.txt || echo 0)
+          total_commits=$(echo "$commits" | wc -l)
+          
+          echo "features_count=$features_count" >> $GITHUB_OUTPUT
+          echo "fixes_count=$fixes_count" >> $GITHUB_OUTPUT
+          echo "total_commits=$total_commits" >> $GITHUB_OUTPUT
+
+      - name: 生成Changelog内容
+        run: |
+          # 创建新的CHANGELOG.md
+          cat > CHANGELOG.md << 'EOF'
+          # 📋 更新日志
+
+          本文档记录了项目的所有重要变更。
+
+          格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，
+          版本控制遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
+
+          ## [未发布] - TBD
+
+          ### 待添加
+          - 新功能预告...
+
+          ---
+          EOF
+          
+          # 获取当前版本号和日期
+          current_version=${{ steps.version-info.outputs.current_version }}
+          release_date=$(date +%Y-%m-%d)
+          
+          # 添加当前版本的变更
+          cat >> CHANGELOG.md << EOF
+          ## [${current_version}] - ${release_date}
+
+          ### 📊 版本统计
+          - 🆕 新功能: ${{ steps.categorize-commits.outputs.features_count }} 项
+          - 🐛 问题修复: ${{ steps.categorize-commits.outputs.fixes_count }} 项
+          - 📝 总提交数: ${{ steps.categorize-commits.outputs.total_commits }} 次
+
+          EOF
+          
+          # 添加各类变更
+          if [ -f temp/features.txt ]; then
+            echo "### 🆕 新功能" >> CHANGELOG.md
+            while IFS='|' read -r hash subject author date; do
+              clean_subject=$(echo "$subject" | sed 's/^feat[^:]*: //')
+              echo "- $clean_subject ([${hash}](https://github.com/${{ github.repository }}/commit/${hash})) - @$author" >> CHANGELOG.md
+            done < temp/features.txt
+            echo "" >> CHANGELOG.md
+          fi
+          
+          if [ -f temp/fixes.txt ]; then
+            echo "### 🐛 问题修复" >> CHANGELOG.md
+            while IFS='|' read -r hash subject author date; do
+              clean_subject=$(echo "$subject" | sed 's/^fix[^:]*: //')
+              echo "- $clean_subject ([${hash}](https://github.com/${{ github.repository }}/commit/${hash})) - @$author" >> CHANGELOG.md
+            done < temp/fixes.txt
+            echo "" >> CHANGELOG.md
+          fi
+          
+          if [ -f temp/performance.txt ]; then
+            echo "### ⚡ 性能优化" >> CHANGELOG.md
+            while IFS='|' read -r hash subject author date; do
+              clean_subject=$(echo "$subject" | sed 's/^perf[^:]*: //')
+              echo "- $clean_subject ([${hash}](https://github.com/${{ github.repository }}/commit/${hash})) - @$author" >> CHANGELOG.md
+            done < temp/performance.txt
+            echo "" >> CHANGELOG.md
+          fi
+          
+          if [ -f temp/refactor.txt ]; then
+            echo "### 🔨 代码重构" >> CHANGELOG.md
+            while IFS='|' read -r hash subject author date; do
+              clean_subject=$(echo "$subject" | sed 's/^refactor[^:]*: //')
+              echo "- $clean_subject ([${hash}](https://github.com/${{ github.repository }}/commit/${hash})) - @$author" >> CHANGELOG.md
+            done < temp/refactor.txt
+            echo "" >> CHANGELOG.md
+          fi
+          
+          if [ -f temp/docs.txt ]; then
+            echo "### 📚 文档更新" >> CHANGELOG.md
+            while IFS='|' read -r hash subject author date; do
+              clean_subject=$(echo "$subject" | sed 's/^docs[^:]*: //')
+              echo "- $clean_subject ([${hash}](https://github.com/${{ github.repository }}/commit/${hash})) - @$author" >> CHANGELOG.md
+            done < temp/docs.txt
+            echo "" >> CHANGELOG.md
+          fi
+          
+          if [ -f temp/tests.txt ]; then
+            echo "### 🧪 测试改进" >> CHANGELOG.md
+            while IFS='|' read -r hash subject author date; do
+              clean_subject=$(echo "$subject" | sed 's/^test[^:]*: //')
+              echo "- $clean_subject ([${hash}](https://github.com/${{ github.repository }}/commit/${hash})) - @$author" >> CHANGELOG.md
+            done < temp/tests.txt
+            echo "" >> CHANGELOG.md
+          fi
+          
+          if [ -f temp/ci.txt ]; then
+            echo "### 🔧 CI/CD改进" >> CHANGELOG.md
+            while IFS='|' read -r hash subject author date; do
+              clean_subject=$(echo "$subject" | sed 's/^ci[^:]*: //')
+              echo "- $clean_subject ([${hash}](https://github.com/${{ github.repository }}/commit/${hash})) - @$author" >> CHANGELOG.md
+            done < temp/ci.txt
+            echo "" >> CHANGELOG.md
+          fi
+          
+          if [ -f temp/chore.txt ]; then
+            echo "### 🛠️ 其他改进" >> CHANGELOG.md
+            while IFS='|' read -r hash subject author date; do
+              clean_subject=$(echo "$subject" | sed 's/^chore[^:]*: //')
+              echo "- $clean_subject ([${hash}](https://github.com/${{ github.repository }}/commit/${hash})) - @$author" >> CHANGELOG.md
+            done < temp/chore.txt
+            echo "" >> CHANGELOG.md
+          fi
+          
+          if [ -f temp/other.txt ]; then
+            echo "### 📋 其他变更" >> CHANGELOG.md
+            while IFS='|' read -r hash subject author date; do
+              echo "- $subject ([${hash}](https://github.com/${{ github.repository }}/commit/${hash})) - @$author" >> CHANGELOG.md
+            done < temp/other.txt
+            echo "" >> CHANGELOG.md
+          fi
+          
+          # 添加比较链接
+          previous_tag=${{ steps.version-info.outputs.previous_tag }}
+          if [[ -n "$previous_tag" ]]; then
+            echo "**完整变更日志**: [${previous_tag}...v${current_version}](https://github.com/${{ github.repository }}/compare/${previous_tag}...v${current_version})" >> CHANGELOG.md
+          else
+            echo "**完整变更日志**: [v${current_version}](https://github.com/${{ github.repository }}/commits/v${current_version})" >> CHANGELOG.md
+          fi
+          
+          echo "" >> CHANGELOG.md
+          echo "---" >> CHANGELOG.md
+          echo "" >> CHANGELOG.md
+
+      - name: 附加历史Changelog (如果存在)
+        run: |
+          # 如果已有CHANGELOG.md，将历史内容追加
+          if [ -f CHANGELOG_backup.md ]; then
+            # 跳过旧文件的头部信息，只保留版本记录
+            sed -n '/^## \[/,$p' CHANGELOG_backup.md >> CHANGELOG.md
+          fi
+
+      - name: 更新README徽章
+        if: inputs.update-readme == true || inputs.update-readme == ''
+        run: |
+          if [ -f README.md ]; then
+            current_version=${{ steps.version-info.outputs.current_version }}
+            
+            # 更新版本徽章
+            sed -i.bak "s|version-[^)]*|version-${current_version}|g" README.md
+            
+            # 更新npm徽章
+            sed -i.bak "s|npm/v/fe-scaffold-mcp-server/[^)]*|npm/v/fe-scaffold-mcp-server/${current_version}|g" README.md
+            
+            # 清理备份文件
+            rm -f README.md.bak
+            
+            echo "✅ README徽章已更新"
+          fi
+
+      - name: 生成发布摘要
+        run: |
+          current_version=${{ steps.version-info.outputs.current_version }}
+          
+          cat > release-summary.md << EOF
+          # 🎉 版本 ${current_version} 发布摘要
+
+          ## 📈 统计信息
+          - **发布日期**: $(date +%Y-%m-%d)
+          - **新功能**: ${{ steps.categorize-commits.outputs.features_count }} 项
+          - **问题修复**: ${{ steps.categorize-commits.outputs.fixes_count }} 项
+          - **总提交数**: ${{ steps.categorize-commits.outputs.total_commits }} 次
+
+          ## 🔗 相关链接
+          - [📦 NPM包](https://www.npmjs.com/package/fe-scaffold-mcp-server)
+          - [📋 完整Changelog](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md)
+          - [🏷️ GitHub Release](https://github.com/${{ github.repository }}/releases/tag/v${current_version})
+
+          ## 📥 安装方式
+          \`\`\`bash
+          npm install fe-scaffold-mcp-server@${current_version}
+          \`\`\`
+
+          ---
+          *此摘要由GitHub Actions自动生成*
+          EOF
+
+      - name: 配置Git
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action Bot"
+
+      - name: 提交Changelog更新
+        run: |
+          git add CHANGELOG.md
+          if [ -f README.md ]; then
+            git add README.md
+          fi
+          
+          # 检查是否有变更需要提交
+          if git diff --staged --quiet; then
+            echo "📝 Changelog无变更，跳过提交"
+          else
+            git commit -m "docs: 更新CHANGELOG.md和README徽章 [skip ci]"
+            git push origin HEAD
+            echo "✅ Changelog已更新并推送"
+          fi
+
+      - name: 上传生成的文件
+        uses: actions/upload-artifact@v4
+        with:
+          name: changelog-artifacts
+          path: |
+            CHANGELOG.md
+            release-summary.md
+            temp/
+
+      - name: 清理临时文件
+        run: |
+          rm -rf temp/
+          rm -f CHANGELOG_backup.md
+
+      - name: 输出总结
+        run: |
+          echo "🎉 Changelog生成完成！"
+          echo "📊 统计信息:"
+          echo "  - 新功能: ${{ steps.categorize-commits.outputs.features_count }} 项"
+          echo "  - 问题修复: ${{ steps.categorize-commits.outputs.fixes_count }} 项"
+          echo "  - 总提交数: ${{ steps.categorize-commits.outputs.total_commits }} 次"
+          echo "🔗 查看完整Changelog: https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md"
