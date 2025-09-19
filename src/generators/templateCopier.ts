@@ -268,11 +268,101 @@ export class TemplateCopier {
       files.push({ source: "_eslintrc.react.cjs", target: ".eslintrc.cjs" });
     }
 
+    // 样式框架配置
+    if (options.styleFramework === "tailwind") {
+      files.push({
+        source: "_tailwind.config.cjs",
+        target: "tailwind.config.cjs",
+      });
+      files.push({ source: "_postcss.config.js", target: "postcss.config.js" });
+    }
+
     // 测试配置
     if (options.testing.framework === "vitest") {
       files.push({ source: "_vitest.config.ts", target: "vitest.config.ts" });
     }
 
+    // 其他质量工具配置
+    if (options.qualityTools.commitlint) {
+      files.push({
+        source: "_commitlint.config.js",
+        target: "commitlint.config.js",
+      });
+    }
+
+    if (options.qualityTools.lintStaged) {
+      files.push({
+        source: "_lint-staged.config.js",
+        target: "lint-staged.config.js",
+      });
+    }
+
+    if (options.qualityTools.lsLint) {
+      files.push({ source: "_ls-lint.yml", target: ".ls-lint.yml" });
+    }
+
+    // Mock 文件配置
+    this.addMockFiles(options, files);
+
     return files;
+  }
+
+  /**
+   * 添加 Mock 文件配置
+   */
+  private static addMockFiles(
+    options: ScaffoldOptions,
+    files: Array<{ source: string; target: string }>
+  ): void {
+    // 检查是否需要 mock 功能
+    const mockSolution = options.testing.mockSolution;
+
+    if (!mockSolution) {
+      return;
+    }
+
+    switch (mockSolution) {
+      case "msw":
+        files.push({
+          source: "mock/_msw.ts",
+          target: "src/mocks/browser.ts",
+        });
+        files.push({
+          source: "mock/_handlers.ts",
+          target: "src/mocks/handlers.ts",
+        });
+        break;
+
+      case "vite-plugin-mock":
+        files.push({
+          source: "mock/_viteMock.ts",
+          target: "mock/index.ts",
+        });
+        break;
+
+      case "mocker-api":
+        files.push({
+          source: "mock/_mockerApi.js",
+          target: "mock/index.js",
+        });
+        break;
+
+      case "webpack-proxy":
+        files.push({
+          source: "mock/_webpackProxy.js",
+          target: "mock/proxy.js",
+        });
+        break;
+
+      default:
+        // 如果是 webpack 构建工具，默认使用 mocker-api
+        if (options.buildTool === "webpack") {
+          files.push({
+            source: "mock/_mockerApi.js",
+            target: "mock/index.js",
+          });
+        }
+        break;
+    }
   }
 }

@@ -1,4 +1,4 @@
-import { ScaffoldOptions } from '../types.js';
+import { ScaffoldOptions } from "../types.js";
 
 /**
  * 技术栈验证器
@@ -49,18 +49,18 @@ export class StackValidator {
     warnings: string[]
   ): void {
     // Vue2 + Webpack 组合警告
-    if (options.framework === 'vue2' && options.buildTool === 'webpack') {
-      warnings.push('Vue2 + Webpack组合可能需要额外的loader配置');
+    if (options.framework === "vue2" && options.buildTool === "webpack") {
+      warnings.push("Vue2 + Webpack组合可能需要额外的loader配置");
     }
 
     // Vue2 + Vite 兼容性检查
-    if (options.framework === 'vue2' && options.buildTool === 'vite') {
-      warnings.push('Vue2 + Vite需要使用@vitejs/plugin-vue2插件');
+    if (options.framework === "vue2" && options.buildTool === "vite") {
+      warnings.push("Vue2 + Vite需要使用@vitejs/plugin-vue2插件");
     }
 
     // React + TypeScript 推荐
-    if (options.framework === 'react' && options.language === 'javascript') {
-      warnings.push('React项目推荐使用TypeScript以获得更好的开发体验');
+    if (options.framework === "react" && options.language === "javascript") {
+      warnings.push("React项目推荐使用TypeScript以获得更好的开发体验");
     }
   }
 
@@ -76,15 +76,21 @@ export class StackValidator {
     if (!options.uiLibrary) return;
 
     const compatibilityMap = {
-      'element-ui': ['vue2'],
-      'element-plus': ['vue3'],
-      'antd': ['react'],
+      "element-ui": ["vue2"],
+      "element-plus": ["vue3"],
+      antd: ["react"],
     };
 
-    const supportedFrameworks = compatibilityMap[options.uiLibrary as keyof typeof compatibilityMap];
-    
-    if (supportedFrameworks && !supportedFrameworks.includes(options.framework)) {
-      errors.push(`UI组件库 ${options.uiLibrary} 不兼容框架 ${options.framework}`);
+    const supportedFrameworks =
+      compatibilityMap[options.uiLibrary as keyof typeof compatibilityMap];
+
+    if (
+      supportedFrameworks &&
+      !supportedFrameworks.includes(options.framework)
+    ) {
+      errors.push(
+        `UI组件库 ${options.uiLibrary} 不兼容框架 ${options.framework}`
+      );
     }
   }
 
@@ -97,13 +103,16 @@ export class StackValidator {
     _warnings: string[]
   ): void {
     // Vitest 主要为 Vite 项目设计
-    if (options.testing.framework === 'vitest' && options.buildTool === 'webpack') {
-      _warnings.push('Vitest主要为Vite项目设计，Webpack项目推荐使用Jest');
+    if (
+      options.testing.framework === "vitest" &&
+      options.buildTool === "webpack"
+    ) {
+      _warnings.push("Vitest主要为Vite项目设计，Webpack项目推荐使用Jest");
     }
 
     // Jest 在 Vite 项目中需要额外配置
-    if (options.testing.framework === 'jest' && options.buildTool === 'vite') {
-      _warnings.push('Jest在Vite项目中需要额外的配置，推荐使用Vitest');
+    if (options.testing.framework === "jest" && options.buildTool === "vite") {
+      _warnings.push("Jest在Vite项目中需要额外的配置，推荐使用Vitest");
     }
   }
 
@@ -118,16 +127,20 @@ export class StackValidator {
     const { buildTool, testing } = options;
 
     // Vite项目的Mock方案检查
-    if (buildTool === 'vite') {
-      if (!['msw', 'vite-plugin-mock'].includes(testing.mockSolution)) {
-        _warnings.push(`Mock方案 ${testing.mockSolution} 不是Vite项目的推荐选择`);
+    if (buildTool === "vite") {
+      if (!["msw", "vite-plugin-mock"].includes(testing.mockSolution)) {
+        _warnings.push(
+          `Mock方案 ${testing.mockSolution} 不是Vite项目的推荐选择`
+        );
       }
     }
 
     // Webpack项目的Mock方案检查
-    if (buildTool === 'webpack') {
-      if (!['webpack-proxy', 'mocker-api', 'msw'].includes(testing.mockSolution)) {
-        _warnings.push(`Mock方案 ${testing.mockSolution} 不是Webpack项目的推荐选择`);
+    if (buildTool === "webpack") {
+      if (!["mocker-api", "msw"].includes(testing.mockSolution)) {
+        _warnings.push(
+          `Mock方案 ${testing.mockSolution} 不是Webpack项目的推荐选择`
+        );
       }
     }
   }
@@ -141,14 +154,16 @@ export class StackValidator {
     _warnings: string[]
   ): void {
     // Tailwind CSS 在所有框架中都支持
-    if (options.styleFramework === 'tailwind') {
+    if (options.styleFramework === "tailwind") {
       return;
     }
 
     // Sass/Less 需要相应的loader或插件
-    if (['sass', 'less'].includes(options.styleFramework)) {
-      if (options.buildTool === 'webpack') {
-        _warnings.push(`${options.styleFramework}需要在Webpack中配置相应的loader`);
+    if (["sass", "less"].includes(options.styleFramework)) {
+      if (options.buildTool === "webpack") {
+        _warnings.push(
+          `${options.styleFramework}需要在Webpack中配置相应的loader`
+        );
       }
     }
   }
@@ -163,12 +178,22 @@ export class StackValidator {
   ): void {
     void _warnings; // 消除未使用变量警告
     // 检查打包分析工具与构建工具的匹配
-    if (options.buildTool === 'vite' && options.bundleAnalyzer === 'webpack-bundle-analyzer') {
-      errors.push('Vite项目应该使用rollup-plugin-visualizer而不是webpack-bundle-analyzer');
+    if (
+      options.buildTool === "vite" &&
+      options.bundleAnalyzer === "webpack-bundle-analyzer"
+    ) {
+      errors.push(
+        "Vite项目应该使用rollup-plugin-visualizer而不是webpack-bundle-analyzer"
+      );
     }
 
-    if (options.buildTool === 'webpack' && options.bundleAnalyzer === 'rollup-plugin-visualizer') {
-      errors.push('Webpack项目应该使用webpack-bundle-analyzer而不是rollup-plugin-visualizer');
+    if (
+      options.buildTool === "webpack" &&
+      options.bundleAnalyzer === "rollup-plugin-visualizer"
+    ) {
+      errors.push(
+        "Webpack项目应该使用webpack-bundle-analyzer而不是rollup-plugin-visualizer"
+      );
     }
   }
 
@@ -178,16 +203,16 @@ export class StackValidator {
   static getRecommendations(framework: string): Partial<ScaffoldOptions> {
     const recommendations: Record<string, Partial<ScaffoldOptions>> = {
       vue3: {
-        framework: 'vue3',
-        language: 'typescript',
-        buildTool: 'vite',
-        styleFramework: 'tailwind',
-        uiLibrary: 'element-plus',
+        framework: "vue3",
+        language: "typescript",
+        buildTool: "vite",
+        styleFramework: "tailwind",
+        uiLibrary: "element-plus",
         testing: {
-          framework: 'vitest',
-          mockSolution: 'msw',
+          framework: "vitest",
+          mockSolution: "msw",
         },
-        bundleAnalyzer: 'rollup-plugin-visualizer',
+        bundleAnalyzer: "rollup-plugin-visualizer",
         qualityTools: {
           eslint: true,
           prettier: true,
@@ -199,16 +224,16 @@ export class StackValidator {
         },
       },
       vue2: {
-        framework: 'vue2',
-        language: 'typescript',
-        buildTool: 'vite',
-        styleFramework: 'tailwind',
-        uiLibrary: 'element-ui',
+        framework: "vue2",
+        language: "typescript",
+        buildTool: "vite",
+        styleFramework: "tailwind",
+        uiLibrary: "element-ui",
         testing: {
-          framework: 'vitest',
-          mockSolution: 'vite-plugin-mock',
+          framework: "vitest",
+          mockSolution: "vite-plugin-mock",
         },
-        bundleAnalyzer: 'rollup-plugin-visualizer',
+        bundleAnalyzer: "rollup-plugin-visualizer",
         qualityTools: {
           eslint: true,
           prettier: true,
@@ -220,16 +245,16 @@ export class StackValidator {
         },
       },
       react: {
-        framework: 'react',
-        language: 'typescript',
-        buildTool: 'vite',
-        styleFramework: 'tailwind',
-        uiLibrary: 'antd',
+        framework: "react",
+        language: "typescript",
+        buildTool: "vite",
+        styleFramework: "tailwind",
+        uiLibrary: "antd",
         testing: {
-          framework: 'vitest',
-          mockSolution: 'msw',
+          framework: "vitest",
+          mockSolution: "msw",
         },
-        bundleAnalyzer: 'rollup-plugin-visualizer',
+        bundleAnalyzer: "rollup-plugin-visualizer",
         qualityTools: {
           eslint: true,
           prettier: true,
@@ -256,34 +281,43 @@ export class StackValidator {
     let fixedUiLibrary = options.uiLibrary;
 
     // 自动修复测试框架
-    if (options.buildTool === 'vite' && options.testing.framework === 'jest') {
-      fixedTestingFramework = 'vitest';
-    } else if (options.buildTool === 'webpack' && options.testing.framework === 'vitest') {
-      fixedTestingFramework = 'jest';
+    if (options.buildTool === "vite" && options.testing.framework === "jest") {
+      fixedTestingFramework = "vitest";
+    } else if (
+      options.buildTool === "webpack" &&
+      options.testing.framework === "vitest"
+    ) {
+      fixedTestingFramework = "jest";
     }
 
     // 自动修复Mock方案
-    if (options.buildTool === 'vite' && !['msw', 'vite-plugin-mock'].includes(options.testing.mockSolution)) {
-      fixedMockSolution = 'msw';
-    } else if (options.buildTool === 'webpack' && !['webpack-proxy', 'mocker-api', 'msw'].includes(options.testing.mockSolution)) {
-      fixedMockSolution = 'webpack-proxy';
+    if (
+      options.buildTool === "vite" &&
+      !["msw", "vite-plugin-mock"].includes(options.testing.mockSolution)
+    ) {
+      fixedMockSolution = "msw";
+    } else if (
+      options.buildTool === "webpack" &&
+      !["mocker-api", "msw"].includes(options.testing.mockSolution)
+    ) {
+      fixedMockSolution = "mocker-api";
     }
 
     // 自动修复打包分析工具
-    if (options.buildTool === 'vite') {
-      fixedBundleAnalyzer = 'rollup-plugin-visualizer';
+    if (options.buildTool === "vite") {
+      fixedBundleAnalyzer = "rollup-plugin-visualizer";
     } else {
-      fixedBundleAnalyzer = 'webpack-bundle-analyzer';
+      fixedBundleAnalyzer = "webpack-bundle-analyzer";
     }
 
     // 自动修复UI组件库
     if (!options.uiLibrary) {
-      if (options.framework === 'vue2') {
-        fixedUiLibrary = 'element-ui';
-      } else if (options.framework === 'vue3') {
-        fixedUiLibrary = 'element-plus';
-      } else if (options.framework === 'react') {
-        fixedUiLibrary = 'antd';
+      if (options.framework === "vue2") {
+        fixedUiLibrary = "element-ui";
+      } else if (options.framework === "vue3") {
+        fixedUiLibrary = "element-plus";
+      } else if (options.framework === "react") {
+        fixedUiLibrary = "antd";
       }
     }
 

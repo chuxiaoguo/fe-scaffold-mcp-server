@@ -91,17 +91,20 @@ export async function handleCreateScaffold(
     // 构建选项
     const options = buildScaffoldOptions(params);
 
+    // 自动修复配置
+    const fixedOptions = StackValidator.autoFix(options);
+
     // 验证技术栈兼容性
-    const validation = StackValidator.validate(options);
+    const validation = StackValidator.validate(fixedOptions);
     if (!validation.isValid) {
       return `❌ 技术栈配置错误:\n${validation.errors.join("\n")}`;
     }
 
-    // 自动修复配置
-    const fixedOptions = StackValidator.autoFix(options);
-
     // 确定项目路径和项目名称
-    const { projectPath, projectName } = resolveProjectPathAndName(params, fixedOptions);
+    const { projectPath, projectName } = resolveProjectPathAndName(
+      params,
+      fixedOptions
+    );
 
     const result = await ProjectGenerator.generateProject(
       fixedOptions,
@@ -231,14 +234,16 @@ function buildScaffoldOptions(params: CreateScaffoldParams): ScaffoldOptions {
       mockSolution: features.includes("mock")
         ? (params.buildTool || "vite") === "vite"
           ? "msw"
-          : "webpack-proxy"
+          : "mocker-api"
         : "msw",
     },
     bundleAnalyzer: features.includes("bundle-analyzer")
       ? (params.buildTool || "vite") === "vite"
         ? "rollup-plugin-visualizer"
         : "webpack-bundle-analyzer"
-      : "rollup-plugin-visualizer",
+      : (params.buildTool || "vite") === "vite"
+      ? "rollup-plugin-visualizer"
+      : "webpack-bundle-analyzer",
   };
 
   return options;
@@ -250,11 +255,12 @@ function buildScaffoldOptions(params: CreateScaffoldParams): ScaffoldOptions {
  */
 function getWorkspaceRoot(): string {
   // 优先使用环境变量中的工作目录（编辑器打开的工程路径）
-  const workspaceRoot = process.env.WORKSPACE_ROOT || 
-                       process.env.VSCODE_CWD || 
-                       process.env.PWD ||
-                       process.cwd();
-  
+  const workspaceRoot =
+    process.env.WORKSPACE_ROOT ||
+    process.env.VSCODE_CWD ||
+    process.env.PWD ||
+    process.cwd();
+
   return workspaceRoot;
 }
 
@@ -264,7 +270,7 @@ function getWorkspaceRoot(): string {
  * 1. 用户指定的相对路径（相对当前编辑器打开工程路径）或指定的绝对路径（最高优先级）
  * 2. 用户当前编辑器打开工程的路径
  * 3. fe-scaffold的安装路径（最低优先级）
- * 
+ *
  * 项目名称：
  * 1. 用户指定的项目名称
  * 2. 模板默认名称（如vue3-vite）
@@ -275,7 +281,7 @@ function resolveProjectPathAndName(
 ): { projectPath: string; projectName: string } {
   // 1. 确定基础路径
   let basePath: string;
-  
+
   if (params.projectPath) {
     // 用户指定了路径（最高优先级）
     if (isAbsolute(params.projectPath)) {
@@ -290,19 +296,19 @@ function resolveProjectPathAndName(
   } else {
     // 用户未指定路径，使用编辑器打开的工程路径（优先级2）
     const workspaceRoot = getWorkspaceRoot();
-    
+
     // 检查是否在有效的工作空间中（包含package.json等）
     const potentialWorkspaces = [
       workspaceRoot,
-      process.cwd() // fe-scaffold的安装路径（最低优先级）
+      process.cwd(), // fe-scaffold的安装路径（最低优先级）
     ];
-    
+
     basePath = findValidWorkspace(potentialWorkspaces) || process.cwd();
   }
-  
+
   // 2. 确定项目名称
   let projectName: string;
-  
+
   if (params.projectName && params.projectName.trim()) {
     // 用户指定了项目名称
     projectName = params.projectName.trim();
@@ -310,13 +316,13 @@ function resolveProjectPathAndName(
     // 使用模板默认名称
     projectName = getTemplateDefaultName(options);
   }
-  
+
   // 3. 构建最终项目路径
   const finalProjectPath = join(basePath, projectName);
-  
+
   return {
     projectPath: finalProjectPath,
-    projectName
+    projectName,
   };
 }
 
@@ -327,22 +333,22 @@ function resolveProjectPathAndName(
 function findValidWorkspace(candidates: string[]): string | null {
   for (const candidate of candidates) {
     if (!candidate) continue;
-    
+
     try {
       // 检查是否包含常见的项目标识文件
       const indicators = [
-        join(candidate, 'package.json'),
-        join(candidate, '.git'),
-        join(candidate, 'yarn.lock'),
-        join(candidate, 'pnpm-lock.yaml'),
-        join(candidate, 'tsconfig.json'),
-        join(candidate, 'vite.config.ts'),
-        join(candidate, 'vite.config.js'),
-        join(candidate, 'webpack.config.js')
+        join(candidate, "package.json"),
+        join(candidate, ".git"),
+        join(candidate, "yarn.lock"),
+        join(candidate, "pnpm-lock.yaml"),
+        join(candidate, "tsconfig.json"),
+        join(candidate, "vite.config.ts"),
+        join(candidate, "vite.config.js"),
+        join(candidate, "webpack.config.js"),
       ];
-      
+
       // 如果存在任何一个指示文件/目录，认为这是一个有效的工作空间
-      if (indicators.some(indicator => existsSync(indicator))) {
+      if (indicators.some((indicator) => existsSync(indicator))) {
         return candidate;
       }
     } catch (error) {
@@ -350,7 +356,7 @@ function findValidWorkspace(candidates: string[]): string | null {
       continue;
     }
   }
-  
+
   return null;
 }
 
@@ -359,17 +365,17 @@ function findValidWorkspace(candidates: string[]): string | null {
  */
 function getTemplateDefaultName(options: ScaffoldOptions): string {
   const { framework, buildTool } = options;
-  
+
   // 构建模板名称映射
   const templateNameMap: Record<string, string> = {
-    'vue3-vite': 'vue3-vite',
-    'vue3-webpack': 'vue3-webpack', 
-    'vue2-vite': 'vue2-vite',
-    'vue2-webpack': 'vue2-webpack',
-    'react-vite': 'react-vite', 
-    'react-webpack': 'react-webpack'
+    "vue3-vite": "vue3-vite",
+    "vue3-webpack": "vue3-webpack",
+    "vue2-vite": "vue2-vite",
+    "vue2-webpack": "vue2-webpack",
+    "react-vite": "react-vite",
+    "react-webpack": "react-webpack",
   };
-  
+
   const key = `${framework}-${buildTool}`;
-  return templateNameMap[key] || 'vue3-vite';
+  return templateNameMap[key] || "vue3-vite";
 }

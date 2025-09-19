@@ -22,6 +22,11 @@ module.exports = {
       {
         test: /\.vue$/,
         loader: "vue-loader",
+        options: {
+          compilerOptions: {
+            preserveWhitespace: false,
+          },
+        },
       },
       {
         test: /\.js$/,
@@ -41,7 +46,7 @@ module.exports = {
   plugins: [
     new VueLoaderPlugin(),
     new HtmlWebpackPlugin({
-      template: "./public/index.html",
+      template: "./index.html",
     }),
     // Bundle analyzer
     process.env.ANALYZE &&

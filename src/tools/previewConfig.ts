@@ -96,7 +96,8 @@ export async function handlePreviewConfig(
       DependencyManager.getDependencies(fixedOptions);
 
     // 确定项目名称
-    const projectName = params.projectName || getDefaultProjectName(fixedOptions);
+    const projectName =
+      params.projectName || getDefaultProjectName(fixedOptions);
 
     let response = `🔍 **项目配置预览**: ${projectName}\n\n`;
 
@@ -212,14 +213,16 @@ function buildScaffoldOptions(params: CreateScaffoldParams): ScaffoldOptions {
       mockSolution: features.includes("mock")
         ? (params.buildTool || "vite") === "vite"
           ? "msw"
-          : "webpack-proxy"
+          : "mocker-api"
         : "msw",
     },
     bundleAnalyzer: features.includes("bundle-analyzer")
       ? (params.buildTool || "vite") === "vite"
         ? "rollup-plugin-visualizer"
         : "webpack-bundle-analyzer"
-      : "rollup-plugin-visualizer",
+      : (params.buildTool || "vite") === "vite"
+      ? "rollup-plugin-visualizer"
+      : "webpack-bundle-analyzer",
   };
 }
 
@@ -229,14 +232,14 @@ function buildScaffoldOptions(params: CreateScaffoldParams): ScaffoldOptions {
 function getDefaultProjectName(options: ScaffoldOptions): string {
   const { framework, buildTool } = options;
   const templateNameMap: Record<string, string> = {
-    'vue3-vite': 'vue3-vite',
-    'vue3-webpack': 'vue3-webpack', 
-    'vue2-vite': 'vue2-vite',
-    'vue2-webpack': 'vue2-webpack',
-    'react-vite': 'react-vite', 
-    'react-webpack': 'react-webpack'
+    "vue3-vite": "vue3-vite",
+    "vue3-webpack": "vue3-webpack",
+    "vue2-vite": "vue2-vite",
+    "vue2-webpack": "vue2-webpack",
+    "react-vite": "react-vite",
+    "react-webpack": "react-webpack",
   };
-  
+
   const key = `${framework}-${buildTool}`;
-  return templateNameMap[key] || 'vue3-vite';
+  return templateNameMap[key] || "vue3-vite";
 }
