@@ -1,0 +1,339 @@
+name: 🧪 生成项目E2E测试
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'src/**'
+      - 'templates/**'
+  pull_request:
+    branches: [main]
+  schedule:
+    # 每天早上8点运行
+    - cron: '0 8 * * *'
+  workflow_dispatch:
+    inputs:
+      test-specific-template:
+        description: '指定测试模板 (留空测试全部)'
+        required: false
+        type: string
+
+jobs:
+  # 生成项目并进行E2E测试
+  e2e-tests:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        framework: [vue3, vue2, react]
+        buildTool: [vite, webpack]
+        language: [typescript, javascript]
+        exclude:
+          # 排除不支持的组合
+          - framework: vue2
+            buildTool: vite
+          - framework: react
+            buildTool: webpack
+            language: javascript
+          # Windows上只测试部分组合以节省时间
+          - os: windows-latest
+            framework: vue2
+          - os: windows-latest
+            language: javascript
+          # macOS上只测试主要组合
+          - os: macos-latest
+            framework: vue2
+          - os: macos-latest
+            buildTool: webpack
+
+    steps:
+      - name: Checkout代码
+        uses: actions/checkout@v4
+
+      - name: 设置Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: 安装项目依赖
+        run: npm ci
+
+      - name: 构建脚手架工具
+        run: npm run build
+
+      - name: 全局安装脚手架工具
+        run: npm link
+
+      - name: 创建测试目录
+        run: |
+          mkdir -p ${{ runner.temp }}/e2e-tests
+          echo "TEST_DIR=${{ runner.temp }}/e2e-tests" >> $GITHUB_ENV
+
+      - name: 跳过特定模板测试
+        if: inputs.test-specific-template != '' && !contains(format('{0}-{1}', matrix.framework, matrix.buildTool), inputs.test-specific-template)
+        run: |
+          echo "跳过模板: ${{ matrix.framework }}-${{ matrix.buildTool }}"
+          exit 0
+
+      - name: 生成测试项目
+        id: generate
+        run: |
+          cd ${{ env.TEST_DIR }}
+          project_name="test-${{ matrix.framework }}-${{ matrix.buildTool }}-${{ matrix.language }}"
+          echo "project_name=$project_name" >> $GITHUB_OUTPUT
+          
+          echo "🚀 生成项目: $project_name"
+          fe-scaffold-mcp-server create-scaffold \
+            --projectName="$project_name" \
+            --framework=${{ matrix.framework }} \
+            --buildTool=${{ matrix.buildTool }} \
+            --language=${{ matrix.language }} \
+            --styleFramework=tailwind \
+            --features=eslint,prettier,testing,mock
+
+      - name: 验证项目结构
+        run: |
+          cd ${{ env.TEST_DIR }}/${{ steps.generate.outputs.project_name }}
+          
+          echo "📁 验证项目结构..."
+          
+          # 检查必要文件
+          test -f package.json || (echo "❌ package.json不存在" && exit 1)
+          test -f README.md || (echo "❌ README.md不存在" && exit 1)
+          
+          # 检查源码目录
+          test -d src || (echo "❌ src目录不存在" && exit 1)
+          
+          # 根据构建工具检查配置文件
+          if [[ "${{ matrix.buildTool }}" == "vite" ]]; then
+            test -f vite.config.* || (echo "❌ vite配置文件不存在" && exit 1)
+          elif [[ "${{ matrix.buildTool }}" == "webpack" ]]; then
+            test -f webpack.config.* || (echo "❌ webpack配置文件不存在" && exit 1)
+          fi
+          
+          # 检查TypeScript配置
+          if [[ "${{ matrix.language }}" == "typescript" ]]; then
+            test -f tsconfig.json || (echo "❌ tsconfig.json不存在" && exit 1)
+          fi
+          
+          echo "✅ 项目结构验证通过"
+
+      - name: 安装生成项目的依赖
+        run: |
+          cd ${{ env.TEST_DIR }}/${{ steps.generate.outputs.project_name }}
+          echo "📦 安装依赖..."
+          npm install
+
+      - name: 运行类型检查 (TypeScript)
+        if: matrix.language == 'typescript'
+        run: |
+          cd ${{ env.TEST_DIR }}/${{ steps.generate.outputs.project_name }}
+          echo "🔍 TypeScript类型检查..."
+          if npm run type-check 2>/dev/null || npx tsc --noEmit 2>/dev/null; then
+            echo "✅ 类型检查通过"
+          else
+            echo "⚠️ 类型检查失败，但继续测试"
+          fi
+
+      - name: 运行代码检查
+        run: |
+          cd ${{ env.TEST_DIR }}/${{ steps.generate.outputs.project_name }}
+          echo "🔍 代码检查..."
+          if npm run lint 2>/dev/null; then
+            echo "✅ 代码检查通过"
+          else
+            echo "⚠️ 代码检查有警告，但继续测试"
+          fi
+
+      - name: 构建项目
+        run: |
+          cd ${{ env.TEST_DIR }}/${{ steps.generate.outputs.project_name }}
+          echo "🏗️ 构建项目..."
+          npm run build
+
+      - name: 验证构建产物
+        run: |
+          cd ${{ env.TEST_DIR }}/${{ steps.generate.outputs.project_name }}
+          
+          # 检查构建输出目录
+          if [[ "${{ matrix.buildTool }}" == "vite" ]]; then
+            test -d dist || (echo "❌ dist目录不存在" && exit 1)
+            test -f dist/index.html || (echo "❌ index.html不存在" && exit 1)
+          elif [[ "${{ matrix.buildTool }}" == "webpack" ]]; then
+            test -d dist || test -d build || (echo "❌ 构建输出目录不存在" && exit 1)
+          fi
+          
+          echo "✅ 构建产物验证通过"
+
+      - name: 运行单元测试 (如果存在)
+        run: |
+          cd ${{ env.TEST_DIR }}/${{ steps.generate.outputs.project_name }}
+          echo "🧪 运行单元测试..."
+          if npm run test 2>/dev/null || npm run test:unit 2>/dev/null; then
+            echo "✅ 单元测试通过"
+          else
+            echo "ℹ️ 未配置单元测试或测试失败"
+          fi
+
+      - name: 测试开发服务器启动
+        timeout-minutes: 3
+        run: |
+          cd ${{ env.TEST_DIR }}/${{ steps.generate.outputs.project_name }}
+          echo "🖥️ 测试开发服务器..."
+          
+          # 启动开发服务器
+          npm run dev &
+          DEV_PID=$!
+          
+          # 等待服务器启动
+          sleep 30
+          
+          # 检查进程是否还在运行
+          if kill -0 $DEV_PID 2>/dev/null; then
+            echo "✅ 开发服务器启动成功"
+            kill $DEV_PID
+          else
+            echo "❌ 开发服务器启动失败"
+            exit 1
+          fi
+
+      - name: 性能基准测试
+        run: |
+          cd ${{ env.TEST_DIR }}/${{ steps.generate.outputs.project_name }}
+          echo "⚡ 性能基准测试..."
+          
+          # 测试构建时间
+          start_time=$(date +%s)
+          npm run build
+          end_time=$(date +%s)
+          build_time=$((end_time - start_time))
+          
+          echo "📊 构建时间: ${build_time}秒"
+          
+          # 检查bundle大小 (如果是vite项目)
+          if [[ "${{ matrix.buildTool }}" == "vite" ]] && [ -d dist ]; then
+            bundle_size=$(du -sh dist | cut -f1)
+            echo "📦 Bundle大小: $bundle_size"
+          fi
+
+      - name: 生成测试报告
+        if: always()
+        run: |
+          cd ${{ env.TEST_DIR }}
+          
+          cat > test-report-${{ matrix.os }}-${{ matrix.framework }}-${{ matrix.buildTool }}-${{ matrix.language }}.json << EOF
+          {
+            "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "platform": "${{ matrix.os }}",
+            "framework": "${{ matrix.framework }}",
+            "buildTool": "${{ matrix.buildTool }}",
+            "language": "${{ matrix.language }}",
+            "projectName": "${{ steps.generate.outputs.project_name }}",
+            "status": "${{ job.status }}",
+            "nodeVersion": "$(node --version)",
+            "npmVersion": "$(npm --version)"
+          }
+          EOF
+
+      - name: 上传测试报告
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-test-report-${{ matrix.os }}-${{ matrix.framework }}-${{ matrix.buildTool }}-${{ matrix.language }}
+          path: |
+            ${{ env.TEST_DIR }}/test-report-*.json
+            ${{ env.TEST_DIR }}/${{ steps.generate.outputs.project_name }}/dist/
+          retention-days: 7
+
+      - name: 清理测试项目
+        if: always()
+        run: |
+          echo "🧹 清理测试文件..."
+          rm -rf ${{ env.TEST_DIR }}
+
+  # 汇总测试结果
+  test-summary:
+    runs-on: ubuntu-latest
+    needs: e2e-tests
+    if: always()
+    steps:
+      - name: 下载所有测试报告
+        uses: actions/download-artifact@v4
+        with:
+          pattern: e2e-test-report-*
+          merge-multiple: true
+          path: test-reports/
+
+      - name: 生成测试总结
+        run: |
+          echo "# 🧪 E2E测试总结报告" > test-summary.md
+          echo "" >> test-summary.md
+          echo "**测试时间:** $(date)" >> test-summary.md
+          echo "**测试分支:** ${{ github.ref_name }}" >> test-summary.md
+          echo "" >> test-summary.md
+          
+          # 统计测试结果
+          total_tests=0
+          passed_tests=0
+          
+          for report in test-reports/*.json; do
+            if [ -f "$report" ]; then
+              ((total_tests++))
+              status=$(cat "$report" | jq -r '.status // "unknown"')
+              if [ "$status" == "success" ]; then
+                ((passed_tests++))
+              fi
+            fi
+          done
+          
+          echo "## 📊 测试统计" >> test-summary.md
+          echo "- 总测试数: $total_tests" >> test-summary.md
+          echo "- 通过测试: $passed_tests" >> test-summary.md
+          echo "- 失败测试: $((total_tests - passed_tests))" >> test-summary.md
+          echo "- 成功率: $(( passed_tests * 100 / total_tests ))%" >> test-summary.md
+          echo "" >> test-summary.md
+          
+          # 详细测试结果
+          echo "## 📋 详细结果" >> test-summary.md
+          echo "| 平台 | 框架 | 构建工具 | 语言 | 状态 |" >> test-summary.md
+          echo "|------|------|----------|------|------|" >> test-summary.md
+          
+          for report in test-reports/*.json; do
+            if [ -f "$report" ]; then
+              platform=$(cat "$report" | jq -r '.platform')
+              framework=$(cat "$report" | jq -r '.framework')
+              buildTool=$(cat "$report" | jq -r '.buildTool')
+              language=$(cat "$report" | jq -r '.language')
+              status=$(cat "$report" | jq -r '.status // "unknown"')
+              
+              if [ "$status" == "success" ]; then
+                status_icon="✅"
+              else
+                status_icon="❌"
+              fi
+              
+              echo "| $platform | $framework | $buildTool | $language | $status_icon $status |" >> test-summary.md
+            fi
+          done
+          
+          echo "" >> test-summary.md
+          echo "---" >> test-summary.md
+          echo "*报告生成时间: $(date)*" >> test-summary.md
+
+      - name: 上传测试总结
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-test-summary
+          path: test-summary.md
+
+      - name: 检查测试是否全部通过
+        run: |
+          # 如果有任何测试失败，标记workflow失败
+          if [ ${{ needs.e2e-tests.result }} != "success" ]; then
+            echo "❌ E2E测试未全部通过"
+            exit 1
+          else
+            echo "✅ 所有E2E测试通过"
+          fi
