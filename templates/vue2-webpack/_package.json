@@ -11,7 +11,9 @@
     "format:check": "prettier --check src/",
     "test": "jest",
     "test:coverage": "jest --coverage",
-    "prepare": "husky install",
+    "prepare": "husky install || true",
+    "postinstall": "echo '\n📝 提示: 如需启用 Git hooks，请先运行: git init && npm run setup-hooks'",
+    "setup-hooks": "husky install && echo '✅ Git hooks 已设置完成'",
     "analyze": "npx webpack-bundle-analyzer dist/stats.json"
   },
   "dependencies": {

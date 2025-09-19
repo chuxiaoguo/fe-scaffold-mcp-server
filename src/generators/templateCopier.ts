@@ -259,6 +259,7 @@ export class TemplateCopier {
 
     // 公共配置文件
     files.push({ source: "_prettierrc.json", target: ".prettierrc.json" });
+    files.push({ source: "_gitignore", target: ".gitignore" });
 
     // 根据框架选择ESLint配置
     if (options.framework.startsWith("vue")) {
