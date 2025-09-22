@@ -2,6 +2,7 @@ import { Tool } from "@modelcontextprotocol/sdk/types.js";
 import { ScaffoldOptions, CreateScaffoldParams } from "../types.js";
 import { StackValidator } from "../utils/stackValidator.js";
 import { ProjectGenerator } from "../generators/projectGenerator.js";
+import { configManager } from "../config/index.js";
 import { resolve, join, isAbsolute } from "path";
 import { existsSync } from "fs";
 
@@ -365,17 +366,6 @@ function findValidWorkspace(candidates: string[]): string | null {
  */
 function getTemplateDefaultName(options: ScaffoldOptions): string {
   const { framework, buildTool } = options;
-
-  // 构建模板名称映射
-  const templateNameMap: Record<string, string> = {
-    "vue3-vite": "vue3-vite",
-    "vue3-webpack": "vue3-webpack",
-    "vue2-vite": "vue2-vite",
-    "vue2-webpack": "vue2-webpack",
-    "react-vite": "react-vite",
-    "react-webpack": "react-webpack",
-  };
-
   const key = `${framework}-${buildTool}`;
-  return templateNameMap[key] || "vue3-vite";
+  return configManager.getTemplateMapping(key);
 }

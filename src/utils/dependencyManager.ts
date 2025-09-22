@@ -5,6 +5,7 @@ import {
   DependencyTypeEnum,
   PackageVersion,
 } from "../types.js";
+import { configManager } from "../config/index.js";
 
 /**
  * 依赖包版本管理
@@ -13,9 +14,10 @@ export class DependencyManager {
   // 便利函数来创建依赖项
   private static dep(
     name: string,
-    version: string,
-    type: DependencyType
+    type: DependencyType,
+    customVersion?: string
   ): DependencyInfo {
+    const version = customVersion || configManager.getDependencyVersion(name);
     return {
       name,
       version: version as PackageVersion,
@@ -28,46 +30,30 @@ export class DependencyManager {
     frameworks: {
       vue3: {
         dependencies: [
-          this.dep("vue", "^3.4.0", DependencyTypeEnum.PRODUCTION),
+          this.dep("vue", DependencyTypeEnum.PRODUCTION),
         ],
         devDependencies: [
-          this.dep(
-            "@vitejs/plugin-vue",
-            "^5.0.0",
-            DependencyTypeEnum.DEVELOPMENT
-          ),
-          this.dep("@vue/tsconfig", "^0.5.0", DependencyTypeEnum.DEVELOPMENT),
+          this.dep("@vitejs/plugin-vue", DependencyTypeEnum.DEVELOPMENT),
+          this.dep("@vue/tsconfig", DependencyTypeEnum.DEVELOPMENT),
         ],
       },
       vue2: {
         dependencies: [
-          this.dep("vue", "^2.7.0", DependencyTypeEnum.PRODUCTION),
+          this.dep("vue", DependencyTypeEnum.PRODUCTION, "^2.7.0"),
         ],
         devDependencies: [
-          this.dep(
-            "@vitejs/plugin-vue2",
-            "^2.3.0",
-            DependencyTypeEnum.DEVELOPMENT
-          ),
+          this.dep("@vitejs/plugin-vue2", DependencyTypeEnum.DEVELOPMENT),
         ],
       },
       react: {
         dependencies: [
-          this.dep("react", "^18.2.0", DependencyTypeEnum.PRODUCTION),
-          this.dep("react-dom", "^18.2.0", DependencyTypeEnum.PRODUCTION),
+          this.dep("react", DependencyTypeEnum.PRODUCTION),
+          this.dep("react-dom", DependencyTypeEnum.PRODUCTION),
         ],
         devDependencies: [
-          this.dep(
-            "@vitejs/plugin-react",
-            "^4.2.0",
-            DependencyTypeEnum.DEVELOPMENT
-          ),
-          this.dep("@types/react", "^18.2.0", DependencyTypeEnum.DEVELOPMENT),
-          this.dep(
-            "@types/react-dom",
-            "^18.2.0",
-            DependencyTypeEnum.DEVELOPMENT
-          ),
+          this.dep("@vitejs/plugin-react", DependencyTypeEnum.DEVELOPMENT),
+          this.dep("@types/react", DependencyTypeEnum.DEVELOPMENT),
+          this.dep("@types/react-dom", DependencyTypeEnum.DEVELOPMENT),
         ],
       },
     },
@@ -76,23 +62,15 @@ export class DependencyManager {
     buildTools: {
       vite: {
         devDependencies: [
-          this.dep("vite", "^5.0.0", DependencyTypeEnum.DEVELOPMENT),
+          this.dep("vite", DependencyTypeEnum.DEVELOPMENT),
         ],
       },
       webpack: {
         devDependencies: [
-          this.dep("webpack", "^5.89.0", DependencyTypeEnum.DEVELOPMENT),
-          this.dep("webpack-cli", "^5.1.0", DependencyTypeEnum.DEVELOPMENT),
-          this.dep(
-            "webpack-dev-server",
-            "^4.15.0",
-            DependencyTypeEnum.DEVELOPMENT
-          ),
-          this.dep(
-            "html-webpack-plugin",
-            "^5.5.0",
-            DependencyTypeEnum.DEVELOPMENT
-          ),
+          this.dep("webpack", DependencyTypeEnum.DEVELOPMENT),
+          this.dep("webpack-cli", DependencyTypeEnum.DEVELOPMENT),
+          this.dep("webpack-dev-server", DependencyTypeEnum.DEVELOPMENT),
+          this.dep("html-webpack-plugin", DependencyTypeEnum.DEVELOPMENT),
         ],
       },
     },
@@ -100,40 +78,24 @@ export class DependencyManager {
     // 代码质量工具
     qualityTools: {
       eslint: [
-        this.dep("eslint", "^8.55.0", DependencyTypeEnum.DEVELOPMENT),
-        this.dep(
-          "@typescript-eslint/parser",
-          "^6.14.0",
-          DependencyTypeEnum.DEVELOPMENT
-        ),
-        this.dep(
-          "@typescript-eslint/eslint-plugin",
-          "^6.14.0",
-          DependencyTypeEnum.DEVELOPMENT
-        ),
+        this.dep("eslint", DependencyTypeEnum.DEVELOPMENT),
+        this.dep("@typescript-eslint/parser", DependencyTypeEnum.DEVELOPMENT),
+        this.dep("@typescript-eslint/eslint-plugin", DependencyTypeEnum.DEVELOPMENT),
       ],
       prettier: [
-        this.dep("prettier", "^3.1.0", DependencyTypeEnum.DEVELOPMENT),
-        this.dep(
-          "eslint-config-prettier",
-          "^9.1.0",
-          DependencyTypeEnum.DEVELOPMENT
-        ),
+        this.dep("prettier", DependencyTypeEnum.DEVELOPMENT),
+        this.dep("eslint-config-prettier", DependencyTypeEnum.DEVELOPMENT),
       ],
       lintStaged: [
-        this.dep("lint-staged", "^15.2.0", DependencyTypeEnum.DEVELOPMENT),
-        this.dep("husky", "^8.0.3", DependencyTypeEnum.DEVELOPMENT),
+        this.dep("lint-staged", DependencyTypeEnum.DEVELOPMENT),
+        this.dep("husky", DependencyTypeEnum.DEVELOPMENT),
       ],
       commitlint: [
-        this.dep("@commitlint/cli", "^18.4.0", DependencyTypeEnum.DEVELOPMENT),
-        this.dep(
-          "@commitlint/config-conventional",
-          "^18.4.0",
-          DependencyTypeEnum.DEVELOPMENT
-        ),
+        this.dep("@commitlint/cli", DependencyTypeEnum.DEVELOPMENT),
+        this.dep("@commitlint/config-conventional", DependencyTypeEnum.DEVELOPMENT),
       ],
-      lsLint: [this.dep("ls-lint", "^0.1.2", DependencyTypeEnum.DEVELOPMENT)],
-      husky: [this.dep("husky", "^8.0.3", DependencyTypeEnum.DEVELOPMENT)],
+      lsLint: [this.dep("ls-lint", DependencyTypeEnum.DEVELOPMENT)],
+      husky: [this.dep("husky", DependencyTypeEnum.DEVELOPMENT)],
       editorconfig: [
         // EditorConfig 本身不需要 npm 包，只需要 .editorconfig 文件
       ],
@@ -142,77 +104,57 @@ export class DependencyManager {
     // 样式框架
     styleFrameworks: {
       tailwind: [
-        this.dep("tailwindcss", "^3.3.0", DependencyTypeEnum.DEVELOPMENT),
-        this.dep("autoprefixer", "^10.4.0", DependencyTypeEnum.DEVELOPMENT),
-        this.dep("postcss", "^8.4.0", DependencyTypeEnum.DEVELOPMENT),
+        this.dep("tailwindcss", DependencyTypeEnum.DEVELOPMENT),
+        this.dep("autoprefixer", DependencyTypeEnum.DEVELOPMENT),
+        this.dep("postcss", DependencyTypeEnum.DEVELOPMENT),
       ],
-      sass: [this.dep("sass", "^1.69.0", DependencyTypeEnum.DEVELOPMENT)],
-      less: [this.dep("less", "^4.2.0", DependencyTypeEnum.DEVELOPMENT)],
+      sass: [this.dep("sass", DependencyTypeEnum.DEVELOPMENT)],
+      less: [this.dep("less", DependencyTypeEnum.DEVELOPMENT)],
     },
 
     // UI组件库
     uiLibraries: {
       "element-ui": [
-        this.dep("element-ui", "^2.15.0", DependencyTypeEnum.PRODUCTION),
+        this.dep("element-ui", DependencyTypeEnum.PRODUCTION),
       ],
       "element-plus": [
-        this.dep("element-plus", "^2.4.0", DependencyTypeEnum.PRODUCTION),
-        this.dep(
-          "@element-plus/icons-vue",
-          "^2.1.0",
-          DependencyTypeEnum.PRODUCTION
-        ),
+        this.dep("element-plus", DependencyTypeEnum.PRODUCTION),
+        this.dep("@element-plus/icons-vue", DependencyTypeEnum.PRODUCTION),
       ],
       antd: [
-        this.dep("antd", "^5.12.0", DependencyTypeEnum.PRODUCTION),
-        this.dep("@ant-design/icons", "^5.2.0", DependencyTypeEnum.PRODUCTION),
+        this.dep("antd", DependencyTypeEnum.PRODUCTION),
+        this.dep("@ant-design/icons", DependencyTypeEnum.PRODUCTION),
       ],
     },
 
     // 测试框架
     testing: {
       vitest: [
-        this.dep("vitest", "^1.0.0", DependencyTypeEnum.DEVELOPMENT),
-        this.dep("@vitest/ui", "^1.0.0", DependencyTypeEnum.DEVELOPMENT),
-        this.dep("jsdom", "^23.0.0", DependencyTypeEnum.DEVELOPMENT),
-        this.dep("@vue/test-utils", "^2.4.0", DependencyTypeEnum.DEVELOPMENT),
-        this.dep(
-          "@testing-library/react",
-          "^14.0.0",
-          DependencyTypeEnum.DEVELOPMENT
-        ),
-        this.dep(
-          "@testing-library/jest-dom",
-          "^6.1.0",
-          DependencyTypeEnum.DEVELOPMENT
-        ),
+        this.dep("vitest", DependencyTypeEnum.DEVELOPMENT),
+        this.dep("@vitest/ui", DependencyTypeEnum.DEVELOPMENT),
+        this.dep("jsdom", DependencyTypeEnum.DEVELOPMENT),
+        this.dep("@vue/test-utils", DependencyTypeEnum.DEVELOPMENT),
+        this.dep("@testing-library/react", DependencyTypeEnum.DEVELOPMENT),
+        this.dep("@testing-library/jest-dom", DependencyTypeEnum.DEVELOPMENT),
       ],
       jest: [
-        this.dep("jest", "^29.7.0", DependencyTypeEnum.DEVELOPMENT),
-        this.dep("@types/jest", "^29.5.0", DependencyTypeEnum.DEVELOPMENT),
-        this.dep("ts-jest", "^29.1.0", DependencyTypeEnum.DEVELOPMENT),
-        this.dep("@vue/test-utils", "^2.4.0", DependencyTypeEnum.DEVELOPMENT),
-        this.dep(
-          "@testing-library/react",
-          "^14.0.0",
-          DependencyTypeEnum.DEVELOPMENT
-        ),
-        this.dep(
-          "@testing-library/jest-dom",
-          "^6.1.0",
-          DependencyTypeEnum.DEVELOPMENT
-        ),
+        this.dep("jest", DependencyTypeEnum.DEVELOPMENT),
+        this.dep("@types/jest", DependencyTypeEnum.DEVELOPMENT),
+        this.dep("ts-jest", DependencyTypeEnum.DEVELOPMENT),
+        this.dep("@vue/test-utils", DependencyTypeEnum.DEVELOPMENT),
+        this.dep("@testing-library/react", DependencyTypeEnum.DEVELOPMENT),
+        this.dep("@testing-library/jest-dom", DependencyTypeEnum.DEVELOPMENT),
       ],
     },
 
     // Mock方案
     mock: {
-      msw: [this.dep("msw", "^2.0.0", DependencyTypeEnum.DEVELOPMENT)],
+      msw: [this.dep("msw", DependencyTypeEnum.DEVELOPMENT)],
       "vite-plugin-mock": [
-        this.dep("vite-plugin-mock", "^3.0.0", DependencyTypeEnum.DEVELOPMENT),
+        this.dep("vite-plugin-mock", DependencyTypeEnum.DEVELOPMENT),
       ],
       "mocker-api": [
-        this.dep("mocker-api", "^2.9.0", DependencyTypeEnum.DEVELOPMENT),
+        this.dep("mocker-api", DependencyTypeEnum.DEVELOPMENT),
       ],
       "webpack-proxy": [
         // webpack-dev-server 内置代理功能，不需要额外包
@@ -222,24 +164,16 @@ export class DependencyManager {
     // 打包分析
     bundleAnalyzer: {
       "rollup-plugin-visualizer": [
-        this.dep(
-          "rollup-plugin-visualizer",
-          "^5.10.0",
-          DependencyTypeEnum.DEVELOPMENT
-        ),
+        this.dep("rollup-plugin-visualizer", DependencyTypeEnum.DEVELOPMENT),
       ],
       "webpack-bundle-analyzer": [
-        this.dep(
-          "webpack-bundle-analyzer",
-          "^4.10.0",
-          DependencyTypeEnum.DEVELOPMENT
-        ),
+        this.dep("webpack-bundle-analyzer", DependencyTypeEnum.DEVELOPMENT),
       ],
     },
 
     // TypeScript
     typescript: [
-      this.dep("typescript", "^5.3.0", DependencyTypeEnum.DEVELOPMENT),
+      this.dep("typescript", DependencyTypeEnum.DEVELOPMENT),
     ],
   } as const;
 

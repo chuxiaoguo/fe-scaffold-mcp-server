@@ -2,6 +2,7 @@ import { promises as fs } from "fs";
 import { join, dirname, resolve } from "path";
 import { fileURLToPath } from "url";
 import { ScaffoldOptions } from "../types.js";
+import { configManager } from "../config/index.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -83,19 +84,8 @@ export class TemplateCopier {
    */
   private static getTemplateName(options: ScaffoldOptions): string {
     const { framework, buildTool } = options;
-
-    // 映射到模板文件夹名称
-    const templateMap: Record<string, string> = {
-      "vue3-vite": "vue3-vite",
-      "vue3-webpack": "vue3-webpack",
-      "vue2-vite": "vue2-vite",
-      "vue2-webpack": "vue2-webpack",
-      "react-vite": "react-vite",
-      "react-webpack": "react-webpack",
-    };
-
     const key = `${framework}-${buildTool}`;
-    return templateMap[key] || "vue3-vite";
+    return configManager.getTemplateMapping(key);
   }
 
   /**
@@ -256,50 +246,58 @@ export class TemplateCopier {
     options: ScaffoldOptions
   ): Array<{ source: string; target: string }> {
     const files: Array<{ source: string; target: string }> = [];
+    const config = configManager.getConfig();
 
     // 公共配置文件
-    files.push({ source: "_prettierrc.json", target: ".prettierrc.json" });
-    files.push({ source: "_gitignore", target: ".gitignore" });
+    config.templates.sharedConfigs.forEach(configFile => {
+      const targetName = configFile.startsWith('_') ? configFile.substring(1) : configFile;
+      const finalTarget = targetName.startsWith('.') ? targetName : `.${targetName}`;
+      files.push({ source: configFile, target: finalTarget });
+    });
 
-    // 根据框架选择ESLint配置
-    if (options.framework.startsWith("vue")) {
-      files.push({ source: "_eslintrc.vue.cjs", target: ".eslintrc.cjs" });
-    } else if (options.framework === "react") {
-      files.push({ source: "_eslintrc.react.cjs", target: ".eslintrc.cjs" });
-    }
+    // 根据选项添加可选配置文件
+    Object.entries(config.templates.optionalConfigs).forEach(([feature, configFiles]) => {
+      let shouldInclude = false;
 
-    // 样式框架配置
-    if (options.styleFramework === "tailwind") {
-      files.push({
-        source: "_tailwind.config.cjs",
-        target: "tailwind.config.cjs",
-      });
-      files.push({ source: "_postcss.config.js", target: "postcss.config.js" });
-    }
+      switch (feature) {
+        case 'eslint':
+          shouldInclude = options.qualityTools.eslint;
+          if (shouldInclude) {
+            // 根据框架选择合适的ESLint配置
+            const eslintConfig = options.framework.startsWith("vue") 
+              ? "_eslintrc.vue.cjs" 
+              : "_eslintrc.react.cjs";
+            files.push({ source: eslintConfig, target: ".eslintrc.cjs" });
+          }
+          break;
+        case 'tailwind':
+          shouldInclude = options.styleFramework === 'tailwind';
+          break;
+        case 'vitest':
+          shouldInclude = options.testing.framework === 'vitest';
+          break;
+        case 'commitlint':
+          shouldInclude = options.qualityTools.commitlint;
+          break;
+        case 'lintStaged':
+          shouldInclude = options.qualityTools.lintStaged;
+          break;
+        case 'lsLint':
+          shouldInclude = options.qualityTools.lsLint;
+          break;
+        case 'husky':
+          shouldInclude = options.qualityTools.husky;
+          break;
+      }
 
-    // 测试配置
-    if (options.testing.framework === "vitest") {
-      files.push({ source: "_vitest.config.ts", target: "vitest.config.ts" });
-    }
-
-    // 其他质量工具配置
-    if (options.qualityTools.commitlint) {
-      files.push({
-        source: "_commitlint.config.js",
-        target: "commitlint.config.js",
-      });
-    }
-
-    if (options.qualityTools.lintStaged) {
-      files.push({
-        source: "_lint-staged.config.js",
-        target: "lint-staged.config.js",
-      });
-    }
-
-    if (options.qualityTools.lsLint) {
-      files.push({ source: "_ls-lint.yml", target: ".ls-lint.yml" });
-    }
+      if (shouldInclude && feature !== 'eslint') {
+        configFiles.forEach(configFile => {
+          const targetName = configFile.startsWith('_') ? configFile.substring(1) : configFile;
+          const finalTarget = targetName.startsWith('.') ? targetName : `.${targetName}`;
+          files.push({ source: configFile, target: finalTarget });
+        });
+      }
+    });
 
     // Mock 文件配置
     this.addMockFiles(options, files);

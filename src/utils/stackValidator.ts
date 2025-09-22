@@ -1,4 +1,5 @@
 import { ScaffoldOptions } from "../types.js";
+import { configManager } from "../config/index.js";
 
 /**
  * 技术栈验证器
@@ -201,73 +202,35 @@ export class StackValidator {
    * 获取推荐的技术栈组合
    */
   static getRecommendations(framework: string): Partial<ScaffoldOptions> {
-    const recommendations: Record<string, Partial<ScaffoldOptions>> = {
-      vue3: {
-        framework: "vue3",
-        language: "typescript",
-        buildTool: "vite",
-        styleFramework: "tailwind",
-        uiLibrary: "element-plus",
-        testing: {
-          framework: "vitest",
-          mockSolution: "msw",
-        },
-        bundleAnalyzer: "rollup-plugin-visualizer",
-        qualityTools: {
-          eslint: true,
-          prettier: true,
-          lintStaged: true,
-          commitlint: true,
-          lsLint: true,
-          husky: true,
-          editorconfig: true,
-        },
+    const frameworkConfig = configManager.getFrameworkConfig(framework);
+    
+    if (!frameworkConfig) {
+      return {};
+    }
+
+    return {
+      framework: framework as ScaffoldOptions["framework"],
+      language: frameworkConfig.defaultLanguage as ScaffoldOptions["language"],
+      buildTool: frameworkConfig.defaultBuildTool as ScaffoldOptions["buildTool"],
+      styleFramework: frameworkConfig.defaultStyleFramework as ScaffoldOptions["styleFramework"],
+      uiLibrary: frameworkConfig.defaultUILibrary,
+      testing: {
+        framework: frameworkConfig.defaultBuildTool === "vite" ? "vitest" : "jest",
+        mockSolution: frameworkConfig.defaultBuildTool === "vite" ? "msw" : "mocker-api",
       },
-      vue2: {
-        framework: "vue2",
-        language: "typescript",
-        buildTool: "vite",
-        styleFramework: "tailwind",
-        uiLibrary: "element-ui",
-        testing: {
-          framework: "vitest",
-          mockSolution: "vite-plugin-mock",
-        },
-        bundleAnalyzer: "rollup-plugin-visualizer",
-        qualityTools: {
-          eslint: true,
-          prettier: true,
-          lintStaged: true,
-          commitlint: true,
-          lsLint: true,
-          husky: true,
-          editorconfig: true,
-        },
-      },
-      react: {
-        framework: "react",
-        language: "typescript",
-        buildTool: "vite",
-        styleFramework: "tailwind",
-        uiLibrary: "antd",
-        testing: {
-          framework: "vitest",
-          mockSolution: "msw",
-        },
-        bundleAnalyzer: "rollup-plugin-visualizer",
-        qualityTools: {
-          eslint: true,
-          prettier: true,
-          lintStaged: true,
-          commitlint: true,
-          lsLint: true,
-          husky: true,
-          editorconfig: true,
-        },
+      bundleAnalyzer: frameworkConfig.defaultBuildTool === "vite" 
+        ? "rollup-plugin-visualizer" 
+        : "webpack-bundle-analyzer",
+      qualityTools: {
+        eslint: true,
+        prettier: true,
+        lintStaged: true,
+        commitlint: true,
+        lsLint: true,
+        husky: true,
+        editorconfig: true,
       },
     };
-
-    return recommendations[framework] || {};
   }
 
   /**
